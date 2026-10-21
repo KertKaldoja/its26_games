@@ -1677,7 +1677,6 @@ async function submitScore() {
         await addDoc(collection(db, "leaderboard"), {
             uid: currentUser.uid,
             name: currentUser.displayName || 'Anonymous',
-            photoURL: currentUser.photoURL || '',
             time: gameTime,
             kills: guardKills,
             timestamp: serverTimestamp()
