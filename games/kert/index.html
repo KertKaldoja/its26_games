@@ -762,6 +762,108 @@ window.__drawWarnTri = function (c, cx, cy, w) {
 @media (max-width: 860px) { #tutorialScreen .sc-grid { grid-template-columns: 1fr; } #tutorialScreen .sc-btn button { min-width: 250px; } }
 @media (prefers-reduced-motion: reduce) { #tutorialScreen, #tutorialScreen * { animation: none !important; } }
 </style>
+<style id="controlsCss">
+/* ===== JUHTNUPPUDE PANEEL ===== */
+#controlsScreen, #modeScreen {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 22%, rgba(40,110,185,.38) 0%, rgba(10,30,60,.18) 45%, transparent 75%),
+    radial-gradient(ellipse 90% 40% at 50% 115%, rgba(255,150,0,.12) 0%, transparent 70%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'><path d='M28 0 56 16v32L28 64 0 48V16zM28 64v33M0 48 0 80M56 48v32' fill='none' stroke='%2362b4ff' stroke-opacity='.055' stroke-width='1'/></svg>"),
+    linear-gradient(180deg,#02050a 0%,#050d17 55%,#02050a 100%) !important;
+  gap: 0 !important; padding: 22px 24px 30px !important; justify-content: safe center;
+  animation: scFade .7s ease-out both;
+}
+#controlsScreen::before, #controlsScreen::after, #modeScreen::before, #modeScreen::after {
+  height: 2px !important; opacity: 1 !important;
+  background: linear-gradient(90deg, transparent 0%, #1d6fb0 20%, #6fd6ff 50%, #1d6fb0 80%, transparent 100%) !important;
+  box-shadow: 0 0 14px rgba(63,193,255,.7);
+}
+#controlsScreen::before, #modeScreen::before { top: 0; } #controlsScreen::after, #modeScreen::after { bottom: 0; }
+#controlsScreen .sc-frame, #modeScreen .sc-frame { position:absolute; inset:14px; pointer-events:none; z-index:0;
+  --c:rgba(111,214,255,.55);
+  background:
+    linear-gradient(var(--c),var(--c)) top left/46px 2px no-repeat, linear-gradient(var(--c),var(--c)) top left/2px 46px no-repeat,
+    linear-gradient(var(--c),var(--c)) top right/46px 2px no-repeat, linear-gradient(var(--c),var(--c)) top right/2px 46px no-repeat,
+    linear-gradient(var(--c),var(--c)) bottom left/46px 2px no-repeat, linear-gradient(var(--c),var(--c)) bottom left/2px 46px no-repeat,
+    linear-gradient(var(--c),var(--c)) bottom right/46px 2px no-repeat, linear-gradient(var(--c),var(--c)) bottom right/2px 46px no-repeat; }
+#controlsScreen > *:not(.sc-frame), #modeScreen > *:not(.sc-frame) { position: relative; z-index: 1; }
+#controlsScreen .title-logo { max-width: min(640px, 90%) !important; max-height: min(25vh, 235px) !important; margin: 0 auto 2px !important;
+  filter: drop-shadow(0 0 26px rgba(70,160,255,.38)) drop-shadow(0 8px 14px rgba(0,0,0,.7)) !important; animation: scLogo .9s .1s cubic-bezier(.2,.8,.2,1) both; }
+
+/* tagline */
+#controlsScreen .sc-tag { display:flex; flex-direction:column; align-items:center; gap:4px; margin: 4px 0 4px; animation: scUp .6s .25s both; }
+#controlsScreen .sc-tag b { font-family: var(--ui) !important; font-weight: 700 !important; font-size: 17px; letter-spacing: .26em; text-transform: uppercase; color: #cfe6fa;
+  display:flex; align-items:center; gap:16px; text-shadow: 0 0 12px rgba(80,170,255,.45); }
+#controlsScreen .sc-tag b::before, #controlsScreen .sc-tag b::after { content:''; width: clamp(40px,9vw,120px); height:1px; background: linear-gradient(90deg, transparent, #5aa9e0); }
+#controlsScreen .sc-tag b::after { transform: scaleX(-1); }
+#controlsScreen .sc-tag i { font-family: var(--ui) !important; font-style: normal; font-weight: 600 !important; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: #7f98ad; }
+
+/* nupud */
+#controlsScreen #startBest { margin-top: 8px; font-size: 14px !important; letter-spacing: .2em !important; color: #ffc24a; text-shadow: 0 0 10px rgba(255,170,0,.5); }
+#controlsScreen .button-group { gap: 18px !important; margin: 16px 0 18px !important; justify-content: center; animation: scUp .6s .4s both; }
+#controlsScreen .sc-btn, #modeScreen .sc-btn { display:inline-block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); transition: transform .12s ease, filter .12s ease; }
+#controlsScreen .sc-btn.primary { filter: drop-shadow(0 0 14px rgba(63,170,255,.55)) drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+#controlsScreen .sc-btn:hover, #modeScreen .sc-btn:hover { transform: translateY(-2px); }
+#controlsScreen .sc-btn.primary:hover { filter: drop-shadow(0 0 22px rgba(90,200,255,.85)) drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+#controlsScreen .sc-btn:active, #modeScreen .sc-btn:active { transform: translateY(1px); }
+#controlsScreen .sc-btn button, #modeScreen .sc-btn button {
+  position: relative; display:flex; align-items:center; justify-content:center; min-width: 300px; height: 62px; padding: 0 40px !important; margin: 0;
+  border: 0 !important; border-left: 0 !important; border-radius: 0 !important; cursor: pointer; color: #dcecfa;
+  background: linear-gradient(180deg, #8fb2cf 0%, #2b4258 100%) !important;
+  clip-path: polygon(20px 0, 100% 0, calc(100% - 20px) 100%, 0 100%); box-shadow: none !important; text-shadow: none;
+}
+#controlsScreen .sc-btn button::before, #modeScreen .sc-btn button::before { content:''; position:absolute; inset:2px; z-index:0;
+  clip-path: polygon(19px 0, 100% 0, calc(100% - 19px) 100%, 0 100%);
+  background: linear-gradient(180deg, #2c4259 0%, #1a2b3c 48%, #0f1b27 52%, #1a2d40 100%); }
+#controlsScreen .sc-btn button::after, #modeScreen .sc-btn button::after { content:''; position:absolute; left:2px; right:2px; top:2px; height:46%; z-index:0; opacity:.16;
+  clip-path: polygon(19px 0, 100% 0, calc(100% - 15px) 100%, 0 100%); background: linear-gradient(180deg,#fff,transparent); }
+#controlsScreen .sc-btn button .gtxt { position: relative; z-index: 2; font-size: 20px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.8)); }
+#controlsScreen .sc-btn.primary button { background: linear-gradient(180deg, #b9ecff 0%, #1e78bd 100%) !important; }
+#controlsScreen .sc-btn.primary button::before { background: linear-gradient(180deg, #38a0ea 0%, #1f78c2 46%, #11508e 54%, #1d73b8 100%); }
+#controlsScreen .sc-btn.primary button::after { opacity: .28; }
+#controlsScreen .sc-btn button:hover::before, #modeScreen .sc-btn button:hover::before { filter: brightness(1.18); }
+#controlsScreen .sc-btn button:focus-visible { outline: 2px solid #ffc24a; outline-offset: 3px; }
+
+/* juhtimise paneel */
+#controlsScreen .important-box {
+  width: min(980px, 94vw); max-width: 100%; box-sizing: border-box; text-align: left !important; line-height: 1.3 !important; margin: 0 !important;
+  padding: 18px 28px 16px !important; font-family: var(--ui) !important; font-weight: 600 !important; letter-spacing: .02em !important;
+  border: 1px solid rgba(98,170,225,.38) !important; border-top: 2px solid #4cb8ff !important; border-left: 1px solid rgba(98,170,225,.38) !important; border-radius: 0 !important;
+  background: linear-gradient(180deg, rgba(18,36,56,.88) 0%, rgba(6,13,22,.94) 100%) !important;
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+  animation: scUp .6s .55s both;
+}
+#controlsScreen .important-box strong.gtitle { display:flex; align-items:center; gap:14px; width:100%; margin-bottom: 12px; padding-bottom: 10px; font-size: 20px !important;
+  border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, #4cb8ff, rgba(76,184,255,.08) 85%) 1; }
+#controlsScreen .important-box strong.gtitle .gtxt { font-size: .95em !important; justify-content: flex-start; }
+#controlsScreen .sc-grid { display:grid; grid-template-columns: 1fr 1fr; column-gap: 34px; row-gap: 9px; }
+#controlsScreen .sc-row { display:flex; align-items:center; gap:12px; min-width:0; }
+#controlsScreen .important-box span.sc-key { flex:0 0 auto; min-width: 150px; padding: 3px 11px; box-sizing:border-box; text-align:center;
+  font-family: var(--ui) !important; font-weight:700; font-size:13.5px; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap;
+  color: #8fe0ff !important; background: linear-gradient(180deg, rgba(60,160,230,.22), rgba(30,90,150,.14)); border:1px solid rgba(90,180,240,.5);
+  clip-path: polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%); }
+#controlsScreen .important-box span.sc-key.red { color:#ff8f84 !important; background: linear-gradient(180deg, rgba(255,70,55,.24), rgba(160,30,25,.14)); border-color: rgba(255,90,75,.55); }
+#controlsScreen .important-box span.sc-desc { color:#d3e2ef !important; font-family: var(--ui) !important; font-size: 15.5px; font-weight:600; letter-spacing:.015em; line-height:1.25; }
+#controlsScreen .important-box span.sc-desc em { font-style:normal; color:#8da6bb !important; font-weight:500; }
+#controlsScreen .sc-hotkeys { display:flex; flex-wrap:wrap; justify-content:center; gap: 8px 22px; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(98,170,225,.22); }
+#controlsScreen .sc-hk { display:inline-flex; align-items:center; gap:8px; font-family: var(--ui) !important; font-weight:600; font-size:14.5px; letter-spacing:.06em; text-transform:uppercase; color:#9db4c8 !important; }
+#controlsScreen .important-box span.kcap { display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px; padding:0 7px; box-sizing:border-box;
+  font-family: var(--num) !important; font-weight:700; font-size:13px; letter-spacing:0; text-transform:none; color:#fff !important;
+  background: linear-gradient(180deg,#4a6177,#26384a); border:1px solid #7f9bb3; border-bottom-width:3px; border-radius:4px; box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+#controlsScreen .sc-note { margin-top: 14px; font-family: var(--ui) !important; font-weight:600 !important; font-size: 13px !important; letter-spacing:.16em !important; text-transform: uppercase; color:#5f788d !important; animation: scUp .6s .7s both; }
+
+@keyframes scFade { from { opacity:0 } to { opacity:1 } }
+@keyframes scUp { from { opacity:0; transform: translateY(14px) } to { opacity:1; transform:none } }
+@keyframes scLogo { from { opacity:0; transform: scale(.92) } to { opacity:1; transform:none } }
+@media (max-width: 860px) { #controlsScreen .sc-grid { grid-template-columns: 1fr; } #controlsScreen .sc-btn button { min-width: 250px; } }
+@media (prefers-reduced-motion: reduce) { #controlsScreen, #controlsScreen * { animation: none !important; } }
+
+#controlsScreen .sc-btn button .ct { position: relative; z-index: 2; font-family: var(--ui) !important; font-weight: 700; font-size: 21px; letter-spacing: .22em; text-transform: uppercase; color: #fff; text-shadow: 0 2px 3px rgba(0,0,0,.8); }
+#controlsScreen .sc-btn button { min-width: 260px; }
+#controlsScreen .sc-tag { margin-bottom: 14px; }
+#controlsScreen .button-group { margin: 22px 0 6px !important; }
+#helpBtn { padding: 4px 10px; font-size: 15px; font-weight: 700; }
+</style>
 <style id="scModeCss">
 /* ===== REŽIIMI VALIK: sama SC2-stiil ===== */
 #modeScreen { gap: 0 !important; padding: 24px !important; justify-content: safe center; animation: scFade .5s ease-out both; }
@@ -856,6 +958,7 @@ window.__drawWarnTri = function (c, cx, cy, w) {
           <button class="fps-btn" data-fps="144" onclick="setFpsTarget(144); this.blur();">144</button>
           <span class="fps-now" id="fpsNow">--</span>
         </div>
+        <button id="helpBtn" onclick="showControls(); this.blur();" title="Juhtnupud ja käsud (?)">?</button>
         <button id="fsBtn" onclick="toggleFullscreen(); this.blur();" title="Täisekraan">⛶</button>
         <button id="muteBtn" onclick="SFX.toggleMusicMute(); this.blur();" title="Muusika sisse/välja (M)">🎵</button>
         <button id="sfxBtn" onclick="SFX.toggleSfxMute(); this.blur();" title="Heliefektid sisse/välja">🔊</button>
@@ -881,25 +984,6 @@ window.__drawWarnTri = function (c, cx, cy, w) {
           <span class="sc-btn primary"><button onclick="pickMode(false)">Alusta Tutorialiga</button></span>
           <span class="sc-btn"><button onclick="pickMode(true)">Jäta Tutorial Vahele</button></span>
         </div>
-        <div class="important-box">
-          <strong>Kuidas mängida:</strong>
-          <div class="sc-grid">
-            <div class="sc-row"><span class="sc-key">Vasak klõps</span><span class="sc-desc">vali üksus või hoone</span></div>
-            <div class="sc-row"><span class="sc-key">All menüü</span><span class="sc-desc">treeni üksusi ja ehita hooneid</span></div>
-            <div class="sc-row"><span class="sc-key">Parem klõps</span><span class="sc-desc">liiguta, kaevanda, mine bunkrisse <em>· Move (roheline ring)</em></span></div>
-            <div class="sc-row"><span class="sc-key">Scroll-ratas</span><span class="sc-desc">suumi sisse ja välja <em>· mäng algab 20% lähemalt</em></span></div>
-            <div class="sc-row"><span class="sc-key red">A + Parem klõps</span><span class="sc-desc">Attack Move <em>· punane ring</em></span></div>
-            <div class="sc-row"><span class="sc-key">Keskmine hiirenupp</span><span class="sc-desc">lohista kaarti <em>· + / − suum klaviatuurilt, 0 lähtesuum</em></span></div>
-          </div>
-          <div class="sc-hotkeys">
-            <span class="sc-hk"><span class="kcap">P</span>paus</span>
-            <span class="sc-hk"><span class="kcap">N</span>järgmine laine kohe</span>
-            <span class="sc-hk"><span class="kcap">M</span>heli</span>
-            <span class="sc-hk"><span class="kcap">A</span>attack move</span>
-            <span class="sc-hk"><span class="kcap">Esc</span>tühista</span>
-          </div>
-        </div>
-        <div class="sc-note">Tutorial ajal on sul rohkem aega enne esimest lainet · Kiirus: 1x / 2x / 3x nupud üleval paremal</div>
       </div>
 
       <script>
@@ -927,6 +1011,34 @@ window.__drawWarnTri = function (c, cx, cy, w) {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',apply); else apply();
 })();
 </script>
+      <!-- Juhtnuppude paneel (ilmub mängu alguses, avatav ? nupust) -->
+      <div id="controlsScreen" class="overlay-screen hidden">
+        <div class="sc-frame"></div>
+        <div class="sc-tag"><b>Juhtnupud ja käsud</b><i>Mäng on peatatud, kuni vajutad Jätka</i></div>
+        <div class="important-box">
+          <div class="sc-grid">
+            <div class="sc-row"><span class="sc-key">Vasak klõps</span><span class="sc-desc">vali üksus või hoone</span></div>
+            <div class="sc-row"><span class="sc-key">All menüü</span><span class="sc-desc">treeni üksusi ja ehita hooneid</span></div>
+            <div class="sc-row"><span class="sc-key">Parem klõps</span><span class="sc-desc">liiguta, kaevanda, mine bunkrisse <em>· Move (roheline ring)</em></span></div>
+            <div class="sc-row"><span class="sc-key">Scroll-ratas</span><span class="sc-desc">suumi sisse ja välja <em>· mäng algab 20% lähemalt</em></span></div>
+            <div class="sc-row"><span class="sc-key red">A + Parem klõps</span><span class="sc-desc">Attack Move <em>· punane ring</em></span></div>
+            <div class="sc-row"><span class="sc-key">Keskmine hiirenupp</span><span class="sc-desc">lohista kaarti <em>· + / − suum klaviatuurilt, 0 lähtesuum</em></span></div>
+          </div>
+          <div class="sc-hotkeys">
+            <span class="sc-hk"><span class="kcap">P</span>paus</span>
+            <span class="sc-hk"><span class="kcap">N</span>järgmine laine kohe</span>
+            <span class="sc-hk"><span class="kcap">M</span>heli</span>
+            <span class="sc-hk"><span class="kcap">A</span>attack move</span>
+            <span class="sc-hk"><span class="kcap">Esc</span>tühista</span>
+            <span class="sc-hk"><span class="kcap">?</span>see paneel</span>
+          </div>
+        </div>
+        <div class="button-group">
+          <span class="sc-btn primary"><button id="controlsContinue" onclick="hideControls()"><span class="ct">Jätka</span></button></span>
+        </div>
+        <div class="sc-note">Kiirus: 1x / 2x / 3x nupud üleval paremal · Selle paneeli saad alati uuesti avada ? nupust</div>
+      </div>
+
       <!-- Day / Night Mode Picker -->
       <div id="modeScreen" class="overlay-screen hidden">
         <div class="sc-frame"></div>
@@ -15381,6 +15493,61 @@ body.hud-hidden #hudToggle span { transform: rotate(180deg); }
     b.style.display = open ? "none" : "block";
   }
   vis(); setInterval(vis, 200);
+})();
+</script>
+
+<script>
+(function () {
+  var scr = document.getElementById("controlsScreen");
+  if (!scr) return;
+  var autoPaused = false;
+  function $(id) { return document.getElementById(id); }
+  function isPaused() { var b = $("pauseBtn"); return !!(b && b.classList.contains("active")); }
+  function gameRunning() {
+    var t = $("tutorialScreen"), m = $("modeScreen"), g = $("gameOverScreen");
+    function hid(e) { return !e || e.classList.contains("hidden"); }
+    return hid(t) && hid(m) && hid(g);
+  }
+  function isOpen() { return !scr.classList.contains("hidden"); }
+  function open() {
+    if (isOpen() || !gameRunning()) return;
+    autoPaused = !isPaused();
+    if (autoPaused && typeof window.togglePause === "function") window.togglePause(true);
+    scr.classList.remove("hidden");
+    var c = $("controlsContinue"); if (c) c.focus();
+  }
+  function close() {
+    if (!isOpen()) return;
+    scr.classList.add("hidden");
+    if (autoPaused && isPaused() && typeof window.togglePause === "function") window.togglePause(false);
+    autoPaused = false;
+  }
+  window.showControls = open;
+  window.hideControls = close;
+
+  // hoia hiire- ja klaviatuurisündmused mängust eemal, kuni paneel on lahti
+  ["mousemove", "mousedown", "mouseup", "wheel", "contextmenu", "pointerdown", "pointermove", "pointerup"].forEach(function (t) {
+    scr.addEventListener(t, function (e) { e.stopPropagation(); });
+  });
+  window.addEventListener("keydown", function (e) {
+    var tag = (e.target && e.target.tagName) || "";
+    if (isOpen()) {
+      if (e.key === "Enter" || e.key === " " || e.key === "Escape" || e.key === "?") { e.preventDefault(); close(); }
+      e.stopPropagation();
+      return;
+    }
+    if (e.key === "?" && !/INPUT|TEXTAREA|SELECT/.test(tag) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); open(); }
+  }, true);
+
+  // näita paneeli iga kord, kui mäng algab (pärast režiimi valikut)
+  var orig = window.startGame;
+  if (typeof orig === "function") {
+    window.startGame = function () {
+      var r = orig.apply(this, arguments);
+      open();
+      return r;
+    };
+  }
 })();
 </script>
 </body>
