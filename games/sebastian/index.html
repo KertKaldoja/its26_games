@@ -1,21 +1,1588 @@
-﻿<!DOCTYPE html>
-<html lang="et">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sebastian — mäng</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; font-family: system-ui, sans-serif; background: #0a0e12; color: #e8f0ff; display: grid; place-items: center; padding: 1.5rem; }
-    a { color: #5eead4; }
-    .box { text-align: center; max-width: 28rem; line-height: 1.6; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DEPTH: Pixel Abyssal Horror</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .pixel-font { font-family: 'Press Start 2P', monospace; }
+        .vt-font { font-family: 'VT323', monospace; }
+
+        /* Pixel Art Canvas Rendering */
+        #gameCanvas {
+            display: block;
+            image-rendering: optimizeSpeed;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Subtle CRT Scanlines Overlay */
+        .crt-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.22) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.02),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.02)
+            );
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* Edge-Only Vignette Shadow (Does NOT block game area) */
+        .vignette-overlay {
+            position: fixed;
+            inset: 0;
+            box-shadow: inset 0 0 90px rgba(2, 6, 23, 0.85);
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .pixel-box {
+            background-color: #0f172a;
+            border: 4px solid #334155;
+            box-shadow: inset -4px -4px 0px #020617, inset 4px 4px 0px #475569;
+        }
+
+        .pixel-button {
+            background-color: #1e293b;
+            border: 3px solid #475569;
+            box-shadow: inset -3px -3px 0px #0f172a, inset 3px 3px 0px #64748b;
+            color: #f1f5f9;
+            transition: all 0.1s ease;
+        }
+        .pixel-button:hover {
+            background-color: #334155;
+            box-shadow: inset -3px -3px 0px #1e293b, inset 3px 3px 0px #94a3b8;
+            color: #ffffff;
+        }
+        .pixel-button:active {
+            box-shadow: inset 3px 3px 0px #0f172a, inset -3px -3px 0px #64748b;
+            transform: translate(2px, 2px);
+        }
+
+        .blood-pulse {
+            animation: pulse-crimson 1.2s infinite ease-in-out;
+        }
+        @keyframes pulse-crimson {
+            0%, 100% { box-shadow: inset 0 0 60px rgba(220, 38, 38, 0.35); }
+            50% { box-shadow: inset 0 0 130px rgba(239, 68, 68, 0.7); }
+        }
+    </style>
 </head>
-<body>
-  <div class="box">
-    <h1>Sebastian</h1>
-    <p>Siia tuleb sinu mäng. Asenda see fail või lisa siia oma HTML/CSS/JS.</p>
-    <p><a href="../../index.html">← tagasi dashboardile</a></p>
-  </div>
+<body class="relative min-h-screen overflow-hidden bg-slate-950 select-none">
+
+    <!-- CRT Scanlines and Vignette Effects -->
+    <div id="crtEffect" class="crt-overlay"></div>
+    <div id="vignetteEffect" class="vignette-overlay"></div>
+
+    <!-- Main Game Pixel Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI HUD OVERLAY -->
+    <div id="hud" class="fixed top-0 left-0 right-0 p-3 pointer-events-none flex justify-between items-start z-30 opacity-0 transition-opacity duration-300">
+        <!-- Status Columns -->
+        <div class="flex flex-col gap-2">
+            <!-- Score & Fish Box -->
+            <div class="pixel-box p-2 flex items-center gap-3">
+                <div>
+                    <div class="text-[9px] text-slate-400 uppercase">SCORE</div>
+                    <div id="hudScore" class="text-xs text-amber-400 font-bold">0</div>
+                </div>
+                <div class="border-l border-slate-700 h-6"></div>
+                <div>
+                    <div class="text-[9px] text-slate-400 uppercase">HAUL</div>
+                    <div id="hudFishCount" class="text-xs text-cyan-400 font-bold">0</div>
+                </div>
+            </div>
+
+            <!-- Hull Bar -->
+            <div class="pixel-box p-2 w-48">
+                <div class="flex justify-between text-[8px] text-emerald-400 mb-1 font-bold">
+                    <span>HULL INTEGRITY</span>
+                    <span id="hullText">100%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-950 border border-slate-700">
+                    <div id="hullBar" class="h-full bg-emerald-500" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Boost Fuel Bar -->
+            <div class="pixel-box p-2 w-48">
+                <div class="flex justify-between text-[8px] text-cyan-400 mb-1 font-bold">
+                    <span>TURBO ENGINE [SHIFT]</span>
+                    <span id="fuelText">100%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-950 border border-slate-700">
+                    <div id="fuelBar" class="h-full bg-cyan-500" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Objective Display -->
+        <div id="objectiveBox" class="pixel-box px-4 py-2 flex flex-col items-center gap-1">
+            <span id="threatTitle" class="text-[8px] text-emerald-400 tracking-wider font-bold">WATERS: CLEAR</span>
+            <span id="objectiveDesc" class="text-[9px] text-slate-200">AIM MOUSE & CAST LURE [SPACE / L-CLICK]</span>
+        </div>
+
+        <!-- Right Controls & Consumables -->
+        <div class="flex flex-col items-end gap-2 pointer-events-auto">
+            <div class="flex gap-2">
+                <button id="crtBtn" class="pixel-button p-2 text-[8px]" title="Toggle CRT Filter">CRT: ON</button>
+                <button id="audioBtn" class="pixel-button p-2 text-[8px]" title="Toggle Audio (M)">SND: ON</button>
+                <button id="pauseBtn" class="pixel-button p-2 text-[8px]" title="Pause Game (P)">PAUSE</button>
+            </div>
+
+            <!-- Consumables Inventory -->
+            <div class="pixel-box p-2 flex gap-3 text-[9px]">
+                <div class="text-center cursor-pointer select-none hover:text-red-300" onclick="deployFlare()">
+                    <div class="text-red-400 font-bold">FLARE [F]</div>
+                    <div id="flareCount" class="text-xs text-white mt-0.5">3</div>
+                </div>
+                <div class="border-l border-slate-700 h-6"></div>
+                <div class="text-center cursor-pointer select-none hover:text-amber-300" onclick="deployBomb()">
+                    <div class="text-amber-400 font-bold">DEPTH BOMB [C]</div>
+                    <div id="bombCount" class="text-xs text-white mt-0.5">2</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOUCH / ON-SCREEN QUICK ACTION BUTTONS -->
+    <div id="mobileControls" class="fixed bottom-4 left-4 right-4 flex justify-between items-end z-30 pointer-events-none opacity-90">
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="btnBoost" class="pixel-button p-3 text-[10px] font-bold text-cyan-300">TURBO [SHIFT]</button>
+        </div>
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="btnFlare" class="pixel-button p-3 text-[10px] font-bold text-red-400">FLARE [F]</button>
+            <button id="btnBomb" class="pixel-button p-3 text-[10px] font-bold text-amber-400">BOMB [C]</button>
+        </div>
+    </div>
+
+    <!-- TENSION MINIGAME GAUGE -->
+    <div id="tensionBox" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-64 pixel-box p-3 z-30 hidden pointer-events-none text-center">
+        <div class="flex justify-between text-[8px] font-bold mb-1">
+            <span class="text-amber-400">LINE TENSION</span>
+            <span id="tensionStatus" class="text-emerald-400">SAFE</span>
+        </div>
+        <div class="w-full h-3 bg-slate-950 border border-slate-700 relative overflow-hidden">
+            <div id="tensionSafeZone" class="absolute top-0 bottom-0 bg-emerald-500/40 border-x-2 border-emerald-400" style="left: 30%; width: 40%;"></div>
+            <div id="tensionBar" class="h-full bg-amber-500 transition-all duration-75" style="width: 20%;"></div>
+        </div>
+        <div class="text-[7px] text-slate-300 mt-1 font-bold">
+            HOLD [SPACE / L-CLICK] TO REEL • KEEP GAUGE IN GREEN!
+        </div>
+    </div>
+
+    <!-- START MENU OVERLAY -->
+    <div id="startScreen" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90">
+        <div class="pixel-box max-w-lg w-full p-6 text-center relative">
+            <div class="text-[10px] text-cyan-400 tracking-widest mb-2 uppercase font-bold">2D Pixelated Retro Fishing Horror</div>
+            <h1 class="text-2xl sm:text-3xl text-red-500 font-bold tracking-widest mb-1 leading-snug">
+                DEPTH
+            </h1>
+            <h2 class="text-xs text-slate-300 mb-5">PIXEL ABYSSAL HORROR</h2>
+
+            <!-- Instruction Panel -->
+            <div class="bg-slate-950 p-3 text-left text-[9px] text-slate-200 space-y-2 mb-5 border border-slate-800 leading-relaxed">
+                <div class="text-amber-400 font-bold border-b border-slate-800 pb-1">INSTRUCTIONS & CONTROLS:</div>
+                <div>• <span class="text-cyan-300">WASD / Arrow Keys</span>: Steer Vessel</div>
+                <div>• <span class="text-cyan-300">Mouse Cursor</span>: Aim Flashlight Beam & Line Cast</div>
+                <div>• <span class="text-cyan-300">Space / Left Click</span>: Cast Line & Reel In Fish</div>
+                <div>• <span class="text-cyan-300">Shift / Right Click</span>: Turbo Engine Boost</div>
+                <div>• <span class="text-cyan-300">Key 'F'</span>: Drop Bright Illuminant Flare</div>
+                <div>• <span class="text-cyan-300">Key 'C' / 'E'</span>: Launch Depth Charge Bomb</div>
+                <div class="text-red-400 font-bold pt-1 border-t border-slate-800">
+                    WARNING: Hooking predatory fish awakens massive abyssal leviathans. Use depth charges or flares to blind them and boost away!
+                </div>
+            </div>
+
+            <button id="startBtn" class="pixel-button w-full py-3 text-xs font-bold text-amber-300 uppercase tracking-widest">
+                LAUNCH BOAT INTO OCEAN
+            </button>
+
+            <div class="mt-4 text-[9px] text-slate-400">
+                HIGH SCORE: <span id="startHighScore" class="text-amber-400 font-bold">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="gameOverScreen" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/95 hidden">
+        <div class="pixel-box max-w-md w-full p-6 text-center border-red-900">
+            <h2 class="text-xl text-red-600 font-bold mb-2">VESSEL DESTROYED</h2>
+            <p id="deathReason" class="text-[9px] text-slate-300 mb-4 leading-relaxed">The abyssal leviathan dragged your boat into the ocean floor.</p>
+
+            <div class="bg-slate-950 p-3 text-[9px] space-y-2 mb-5 border border-slate-800 text-left">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">FINAL SCORE:</span>
+                    <span id="finalScore" class="text-amber-400 font-bold">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">FISH CAUGHT:</span>
+                    <span id="finalFish" class="text-cyan-400 font-bold">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">SURVIVAL TIME:</span>
+                    <span id="finalTime" class="text-white font-bold">0s</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">ALL-TIME HIGH:</span>
+                    <span id="finalBest" class="text-emerald-400 font-bold">0</span>
+                </div>
+            </div>
+
+            <button id="restartBtn" class="pixel-button w-full py-3 text-xs font-bold text-red-400 uppercase tracking-widest">
+                PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- PAUSE SCREEN -->
+    <div id="pauseScreen" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/80 hidden">
+        <div class="pixel-box max-w-xs w-full p-5 text-center">
+            <h3 class="text-sm font-bold text-white mb-4">GAME PAUSED</h3>
+            <div class="space-y-2">
+                <button id="resumeBtn" class="pixel-button w-full py-2 text-[9px]">RESUME</button>
+                <button id="quitBtn" class="pixel-button w-full py-2 text-[9px] text-red-400">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * DEPTH: PIXEL ABYSSAL HORROR
+         * Low-res retro canvas engine (360x270 pixel grid scaled crisply to view window)
+         */
+
+        // --- WEB AUDIO CHIPTUNE & SOUND SYNTHESIS ---
+        class PixelAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.engineOsc = null;
+                this.engineGain = null;
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                this.ctx = new AudioCtx();
+
+                // Engine Loop Noise Synth
+                this.engineOsc = this.ctx.createOscillator();
+                this.engineGain = this.ctx.createGain();
+                this.engineOsc.type = 'sawtooth';
+                this.engineOsc.frequency.setValueAtTime(30, this.ctx.currentTime);
+                this.engineGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(120, this.ctx.currentTime);
+
+                this.engineOsc.connect(filter);
+                filter.connect(this.engineGain);
+                this.engineGain.connect(this.ctx.destination);
+                this.engineOsc.start();
+            }
+
+            updateEngine(speedRatio, boosting) {
+                if (!this.ctx || !this.enabled) return;
+                const freq = 28 + speedRatio * 38 + (boosting ? 35 : 0);
+                const gain = 0.015 + speedRatio * 0.025 + (boosting ? 0.035 : 0);
+                this.engineOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
+                this.engineGain.gain.setTargetAtTime(gain, this.ctx.currentTime, 0.1);
+            }
+
+            stopEngine() {
+                if (this.engineGain && this.ctx) {
+                    this.engineGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+                }
+            }
+
+            playBlip(freq = 440, dur = 0.05, type = 'square') {
+                if (!this.ctx || !this.enabled) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + dur);
+            }
+
+            playCast() {
+                if (!this.ctx || !this.enabled) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(550, now);
+                osc.frequency.linearRampToValueAtTime(160, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+
+            playSplash() {
+                if (!this.ctx || !this.enabled) return;
+                const now = this.ctx.currentTime;
+                const bufSize = this.ctx.sampleRate * 0.2;
+                const buffer = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(450, now);
+                filter.frequency.linearRampToValueAtTime(90, now + 0.2);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            playRoar() {
+                if (!this.ctx || !this.enabled) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(95, now);
+                osc.frequency.exponentialRampToValueAtTime(22, now + 1.2);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 1.2);
+            }
+
+            playExplosion() {
+                if (!this.ctx || !this.enabled) return;
+                const now = this.ctx.currentTime;
+                const bufSize = this.ctx.sampleRate * 0.5;
+                const buffer = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(220, now);
+                filter.frequency.linearRampToValueAtTime(35, now + 0.5);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+        }
+
+        const audio = new PixelAudio();
+
+        // --- LOW-RES CANVAS SETUP ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GAME_WIDTH = 360;
+        const GAME_HEIGHT = 270;
+        const WORLD_SIZE = 2800;
+
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
+
+        // UI DOM Elements
+        const hud = document.getElementById('hud');
+        const hudScore = document.getElementById('hudScore');
+        const hudFishCount = document.getElementById('hudFishCount');
+        const hullBar = document.getElementById('hullBar');
+        const hullText = document.getElementById('hullText');
+        const fuelBar = document.getElementById('fuelBar');
+        const fuelText = document.getElementById('fuelText');
+        const flareCountEl = document.getElementById('flareCount');
+        const bombCountEl = document.getElementById('bombCount');
+        const objectiveBox = document.getElementById('objectiveBox');
+        const threatTitle = document.getElementById('threatTitle');
+        const objectiveDesc = document.getElementById('objectiveDesc');
+        const tensionBox = document.getElementById('tensionBox');
+        const tensionBar = document.getElementById('tensionBar');
+        const tensionStatus = document.getElementById('tensionStatus');
+
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+
+        // Game World States
+        let gameState = 'START'; // START, FISHING, REELING, HORROR, GAMEOVER, PAUSED
+        let lastTime = performance.now();
+        let gameTime = 0;
+        let score = 0;
+        let fishCaught = 0;
+        let cameraShake = 0;
+        let flares = 3;
+        let bombs = 2;
+        let crtEnabled = true;
+        let highScore = parseInt(localStorage.getItem('depth_pixel_hs') || '0');
+
+        document.getElementById('startHighScore').innerText = highScore.toLocaleString();
+
+        // Camera Viewport
+        const camera = { x: 0, y: 0, w: GAME_WIDTH, h: GAME_HEIGHT };
+
+        // Input Handling
+        const keys = {};
+        const mouse = { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, worldX: WORLD_SIZE / 2, worldY: WORLD_SIZE / 2, down: false, rightDown: false };
+
+        function updateMouseWorldPos(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = GAME_WIDTH / rect.width;
+            const scaleY = GAME_HEIGHT / rect.height;
+            mouse.x = (clientX - rect.left) * scaleX;
+            mouse.y = (clientY - rect.top) * scaleY;
+            mouse.worldX = mouse.x + camera.x;
+            mouse.worldY = mouse.y + camera.y;
+        }
+
+        window.addEventListener('keydown', e => {
+            const code = e.code;
+            keys[code] = true;
+            if ((code === 'KeyF' || code === 'Keyf') && !e.repeat) deployFlare();
+            if ((code === 'KeyC' || code === 'Keyc' || code === 'KeyE' || code === 'Keye') && !e.repeat) deployBomb();
+            if ((code === 'KeyR' || code === 'Keyr') && !e.repeat) reelBackLine();
+            if (code === 'KeyP' || code === 'Escape') togglePause();
+            if (code === 'KeyM') toggleAudio();
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        canvas.addEventListener('mousemove', e => updateMouseWorldPos(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => updateMouseWorldPos(e.clientX, e.clientY));
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0) {
+                mouse.down = true;
+                if (gameState === 'FISHING') castLine();
+            } else if (e.button === 2) {
+                mouse.rightDown = true;
+                reelBackLine();
+            }
+        });
+        canvas.addEventListener('mouseup', e => {
+            if (e.button === 0) mouse.down = false;
+            if (e.button === 2) mouse.rightDown = false;
+        });
+
+        function reelBackLine() {
+            if (lure.active) {
+                lure.reset();
+                popups.push(new PixelPopup(player.x, player.y - 12, "LINE REELED!", "#38bdf8"));
+                if (gameState === 'REELING') gameState = 'FISHING';
+            }
+        }
+
+        canvas.addEventListener('touchstart', e => {
+            if (e.touches.length > 0) {
+                updateMouseWorldPos(e.touches[0].clientX, e.touches[0].clientY);
+                mouse.down = true;
+                if (gameState === 'FISHING') castLine();
+            }
+        });
+        canvas.addEventListener('touchmove', e => {
+            if (e.touches.length > 0) updateMouseWorldPos(e.touches[0].clientX, e.touches[0].clientY);
+        });
+        canvas.addEventListener('touchend', () => { mouse.down = false; });
+
+        // Touch Control Buttons
+        document.getElementById('btnFlare').addEventListener('click', (e) => { e.stopPropagation(); deployFlare(); });
+        document.getElementById('btnBomb').addEventListener('click', (e) => { e.stopPropagation(); deployBomb(); });
+        document.getElementById('btnBoost').addEventListener('touchstart', (e) => { e.stopPropagation(); keys['ShiftLeft'] = true; });
+        document.getElementById('btnBoost').addEventListener('touchend', (e) => { e.stopPropagation(); keys['ShiftLeft'] = false; });
+        document.getElementById('btnBoost').addEventListener('mousedown', (e) => { e.stopPropagation(); keys['ShiftLeft'] = true; });
+        document.getElementById('btnBoost').addEventListener('mouseup', (e) => { e.stopPropagation(); keys['ShiftLeft'] = false; });
+
+        // --- GAME OBJECTS & PROCEDURAL PIXEL RENDERING ---
+
+        // Player Boat
+        const player = {
+            x: WORLD_SIZE / 2,
+            y: WORLD_SIZE / 2,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            aimAngle: 0,
+            speed: 0,
+            maxSpeed: 3.2,
+            boostSpeed: 5.8,
+            accel: 0.12,
+            friction: 0.95,
+            turnSpeed: 0.06,
+            radius: 12,
+            hull: 100,
+            maxHull: 100,
+            fuel: 100,
+            maxFuel: 100,
+            isBoosting: false,
+
+            reset() {
+                this.x = WORLD_SIZE / 2;
+                this.y = WORLD_SIZE / 2;
+                this.vx = 0;
+                this.vy = 0;
+                this.angle = 0;
+                this.aimAngle = 0;
+                this.speed = 0;
+                this.hull = 100;
+                this.fuel = 100;
+            },
+
+            update() {
+                const fwd = keys['KeyW'] || keys['ArrowUp'];
+                const bwd = keys['KeyS'] || keys['ArrowDown'];
+                const left = keys['KeyA'] || keys['ArrowLeft'];
+                const right = keys['KeyD'] || keys['ArrowRight'];
+
+                if (left) this.angle -= this.turnSpeed;
+                if (right) this.angle += this.turnSpeed;
+
+                // Searchlight aiming towards mouse position
+                const targetAimAngle = Math.atan2(mouse.worldY - this.y, mouse.worldX - this.x);
+                let aimDiff = targetAimAngle - this.aimAngle;
+                while (aimDiff < -Math.PI) aimDiff += Math.PI * 2;
+                while (aimDiff > Math.PI) aimDiff -= Math.PI * 2;
+                this.aimAngle += aimDiff * 0.2;
+
+                const wantsBoost = (keys['ShiftLeft'] || keys['ShiftRight']) && this.fuel > 2 && (fwd || Math.abs(this.speed) > 0.5);
+                this.isBoosting = wantsBoost;
+
+                if (this.isBoosting) {
+                    this.fuel = Math.max(0, this.fuel - 0.5);
+                    particles.push(new PixelParticle(
+                        this.x - Math.cos(this.angle) * 12,
+                        this.y - Math.sin(this.angle) * 12,
+                        -Math.cos(this.angle) * 2 + (Math.random() - 0.5),
+                        -Math.sin(this.angle) * 2 + (Math.random() - 0.5),
+                        '#38bdf8', 2, 15
+                    ));
+                } else {
+                    this.fuel = Math.min(this.maxFuel, this.fuel + 0.18);
+                }
+
+                const curMax = this.isBoosting ? this.boostSpeed : this.maxSpeed;
+
+                if (fwd) {
+                    this.speed = Math.min(curMax, this.speed + this.accel);
+                } else if (bwd) {
+                    this.speed = Math.max(-this.maxSpeed * 0.4, this.speed - this.accel * 0.5);
+                } else {
+                    this.speed *= this.friction;
+                }
+
+                this.vx = Math.cos(this.angle) * this.speed;
+                this.vy = Math.sin(this.angle) * this.speed;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Clamp boundaries
+                const margin = 50;
+                if (this.x < margin) { this.x = margin; this.vx *= -0.5; }
+                if (this.x > WORLD_SIZE - margin) { this.x = WORLD_SIZE - margin; this.vx *= -0.5; }
+                if (this.y < margin) { this.y = margin; this.vy *= -0.5; }
+                if (this.y > WORLD_SIZE - margin) { this.y = WORLD_SIZE - margin; this.vy *= -0.5; }
+
+                if (Math.abs(this.speed) > 0.5 && Math.random() < 0.4) {
+                    particles.push(new PixelParticle(
+                        this.x - Math.cos(this.angle) * 10,
+                        this.y - Math.sin(this.angle) * 10,
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.5,
+                        'rgba(148, 163, 184, 0.6)', 2, 20
+                    ));
+                }
+
+                audio.updateEngine(Math.abs(this.speed) / this.maxSpeed, this.isBoosting);
+            },
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+                ctx.rotate(this.angle);
+
+                // Pixelated Wooden Trawler Hull with Bold Outline
+                ctx.fillStyle = '#020617'; // Black Outline
+                ctx.fillRect(-14, -8, 26, 16);
+
+                ctx.fillStyle = '#78350f'; // Dark wood
+                ctx.fillRect(-12, -6, 22, 12);
+                ctx.fillStyle = '#b45309';
+                ctx.fillRect(-10, -4, 18, 8);
+
+                // Bow Point
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(10, -4, 4, 8);
+                ctx.fillRect(14, -2, 3, 4);
+
+                // Cabin
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(-4, -3, 7, 6);
+
+                // Front Searchlight Lens
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(10, -2, 4, 4);
+
+                ctx.restore();
+            }
+        };
+
+        // Manual Fishing Line
+        const lure = {
+            active: false,
+            x: 0,
+            y: 0,
+            targetX: 0,
+            targetY: 0,
+            hookedFish: null,
+            tension: 20,
+
+            cast(startX, startY, targetX, targetY) {
+                this.x = startX;
+                this.y = startY;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.active = true;
+                this.hookedFish = null;
+                this.tension = 20;
+                audio.playCast();
+            },
+
+            reset() {
+                this.active = false;
+                this.hookedFish = null;
+                this.tension = 20;
+                tensionBox.classList.add('hidden');
+            },
+
+            update() {
+                if (!this.active) return;
+
+                if (!this.hookedFish) {
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    this.x += dx * 0.12;
+                    this.y += dy * 0.12;
+
+                    // Snag swimming fish
+                    fishes.forEach(fish => {
+                        const dist = Math.hypot(this.x - fish.x, this.y - fish.y);
+                        if (dist < fish.radius + 6) {
+                            this.hookedFish = fish;
+                            gameState = 'REELING';
+                            tensionBox.classList.remove('hidden');
+                            audio.playSplash();
+
+                            if (fish.type === 'ANGLER' || fish.type === 'PIKE') {
+                                popups.push(new PixelPopup(fish.x, fish.y - 12, "PREDATOR HOOKED!", "#ef4444"));
+                            }
+                        }
+                    });
+                } else {
+                    this.x = this.hookedFish.x;
+                    this.y = this.hookedFish.y;
+
+                    const pulling = mouse.down || keys['Space'];
+                    if (pulling) {
+                        this.tension += 1.4;
+                        audio.playBlip(700, 0.02, 'square');
+                        const angle = Math.atan2(player.y - this.hookedFish.y, player.x - this.hookedFish.x);
+                        this.hookedFish.x += Math.cos(angle) * 1.8;
+                        this.hookedFish.y += Math.sin(angle) * 1.8;
+                    } else {
+                        this.tension -= 0.9;
+                    }
+
+                    this.tension += (Math.random() - 0.45) * 1.8;
+                    this.tension = Math.max(0, Math.min(100, this.tension));
+
+                    tensionBar.style.width = `${this.tension}%`;
+                    if (this.tension >= 30 && this.tension <= 70) {
+                        tensionStatus.innerText = "SAFE";
+                        tensionStatus.className = "text-emerald-400 font-bold";
+                    } else {
+                        tensionStatus.innerText = "DANGER!";
+                        tensionStatus.className = "text-red-500 font-bold animate-pulse";
+                    }
+
+                    if (this.tension >= 100) {
+                        popups.push(new PixelPopup(player.x, player.y - 12, "LINE SNAPPED!", "#ef4444"));
+                        this.reset();
+                        gameState = 'FISHING';
+                        return;
+                    }
+
+                    const distToBoat = Math.hypot(player.x - this.hookedFish.x, player.y - this.hookedFish.y);
+                    if (distToBoat < player.radius + 10) {
+                        catchFish(this.hookedFish);
+                    }
+                }
+            },
+
+            draw(ctx) {
+                if (!this.active) return;
+                ctx.strokeStyle = this.hookedFish ? '#f59e0b' : '#38bdf8';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(Math.floor(player.x), Math.floor(player.y));
+                ctx.lineTo(Math.floor(this.x), Math.floor(this.y));
+                ctx.stroke();
+
+                // Lure pixel bobber
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(Math.floor(this.x) - 2, Math.floor(this.y) - 2, 4, 4);
+            }
+        };
+
+        // Fish Entity Species - SLOWER SPEED + DETAILED PIXEL SILHOUETTES
+        class Fish {
+            constructor(type, x, y) {
+                this.type = type; // MINNOW, DARTER, PIKE, ANGLER
+                this.x = x || Math.random() * (WORLD_SIZE - 200) + 100;
+                this.y = y || Math.random() * (WORLD_SIZE - 200) + 100;
+                this.angle = Math.random() * Math.PI * 2;
+
+                // REDUCED SPEEDS FOR ENJOYABLE GAMEPLAY
+                if (type === 'MINNOW') { this.speed = 0.9; this.radius = 6; }
+                else if (type === 'DARTER') { this.speed = 1.2; this.radius = 8; }
+                else if (type === 'PIKE') { this.speed = 1.4; this.radius = 12; }
+                else if (type === 'ANGLER') { this.speed = 1.0; this.radius = 15; }
+            }
+
+            update() {
+                if (lure.hookedFish === this) return;
+                this.angle += (Math.random() - 0.5) * 0.12;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                if (this.x < 80) this.angle = 0;
+                if (this.x > WORLD_SIZE - 80) this.angle = Math.PI;
+                if (this.y < 80) this.angle = Math.PI / 2;
+                if (this.y > WORLD_SIZE - 80) this.angle = -Math.PI / 2;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+                ctx.rotate(this.angle);
+
+                if (this.type === 'MINNOW') {
+                    // Detailed Bioluminescent Cyan Minnow Sprite
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.fillRect(-6, -2, 10, 4);
+                    ctx.fillStyle = '#22d3ee';
+                    ctx.fillRect(-4, -1, 7, 2);
+                    // Tail Fin
+                    ctx.fillStyle = '#67e8f9';
+                    ctx.fillRect(-8, -3, 3, 2);
+                    ctx.fillRect(-8, 1, 3, 2);
+                    // Eye
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(2, -1, 2, 2);
+                } else if (this.type === 'DARTER') {
+                    // Detailed Emerald Green Darter Sprite
+                    ctx.fillStyle = '#047857';
+                    ctx.fillRect(-8, -3, 14, 6);
+                    ctx.fillStyle = '#34d399';
+                    ctx.fillRect(-6, -2, 10, 4);
+                    // Dorsal Fin
+                    ctx.fillStyle = '#10b981';
+                    ctx.fillRect(-2, -5, 5, 2);
+                    // Tail
+                    ctx.fillRect(-11, -3, 3, 6);
+                    // Eye
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(3, -1, 2, 2);
+                } else if (this.type === 'PIKE') {
+                    // Elongated Shadow Pike Sprite
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(-14, -3, 26, 6);
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(-12, -2, 22, 4);
+                    // Sharp Snout
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillRect(12, -1, 4, 2);
+                    // Fins
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(-6, -5, 4, 2);
+                    ctx.fillRect(-6, 3, 4, 2);
+                    ctx.fillRect(-16, -4, 3, 8);
+                    // Glowing Red Eye
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(8, -2, 2, 2);
+                } else if (this.type === 'ANGLER') {
+                    // Deep Crimson Anglerfish Sprite
+                    ctx.fillStyle = '#450a0a';
+                    ctx.fillRect(-12, -6, 22, 12);
+                    ctx.fillStyle = '#dc2626';
+                    ctx.fillRect(-10, -4, 18, 8);
+                    // Jaws & Teeth
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(8, -4, 2, 2);
+                    ctx.fillRect(8, 2, 2, 2);
+                    // Lure Stalk & Glowing Bulb
+                    ctx.fillStyle = '#991b1b';
+                    ctx.fillRect(2, -9, 2, 4);
+                    ctx.fillRect(4, -11, 4, 2);
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.fillRect(8, -12, 4, 4);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // DETAILED MULTI-PART SEGMENTED PIXEL LEVIATHAN (NO MORE SIMPLE CUBE)
+        const leviathan = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            speed: 2.0, // MUCH SLOWER & MANAGEABLE (was 4.8)
+            radius: 32,
+            stunned: 0,
+            jawOpen: 0,
+            segments: [], // Segmented tail history
+
+            init() {
+                const spawnAngle = Math.random() * Math.PI * 2;
+                this.x = player.x + Math.cos(spawnAngle) * 400;
+                this.y = player.y + Math.sin(spawnAngle) * 400;
+                this.stunned = 0;
+                this.jawOpen = 0;
+                this.segments = [];
+                for (let i = 0; i < 6; i++) {
+                    this.segments.push({ x: this.x - i * 14, y: this.y });
+                }
+            },
+
+            update() {
+                if (this.stunned > 0) {
+                    this.stunned--;
+                    return;
+                }
+
+                const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
+                let diff = targetAngle - this.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                this.angle += diff * 0.04; // Smooth turn rate
+
+                this.vx = Math.cos(this.angle) * this.speed;
+                this.vy = Math.sin(this.angle) * this.speed;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Update segmented tail joints
+                if (this.segments.length > 0) {
+                    this.segments[0].x = this.x - Math.cos(this.angle) * 16;
+                    this.segments[0].y = this.y - Math.sin(this.angle) * 16;
+                    for (let i = 1; i < this.segments.length; i++) {
+                        const prev = this.segments[i - 1];
+                        const curr = this.segments[i];
+                        const angle = Math.atan2(prev.y - curr.y, prev.x - curr.x);
+                        curr.x = prev.x - Math.cos(angle) * 12;
+                        curr.y = prev.y - Math.sin(angle) * 12;
+                    }
+                }
+
+                this.jawOpen = (Math.sin(gameTime * 0.005) + 1) * 5;
+
+                if (Math.random() < 0.25) {
+                    particles.push(new PixelParticle(
+                        this.x + (Math.random() - 0.5) * 20,
+                        this.y + (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.5,
+                        '#991b1b', 3, 25
+                    ));
+                }
+            },
+
+            draw(ctx) {
+                // 1. Draw Segmented Serpent Tail First (Behind Head)
+                for (let i = this.segments.length - 1; i >= 0; i--) {
+                    const seg = this.segments[i];
+                    ctx.save();
+                    ctx.translate(Math.floor(seg.x), Math.floor(seg.y));
+                    const segSize = 24 - i * 3;
+
+                    // Black Outline
+                    ctx.fillStyle = '#020617';
+                    ctx.fillRect(-Math.floor(segSize / 2) - 2, -Math.floor(segSize / 2) - 2, segSize + 4, segSize + 4);
+
+                    // Body Segment Color
+                    ctx.fillStyle = i % 2 === 0 ? '#450a0a' : '#7f1d1d';
+                    ctx.fillRect(-Math.floor(segSize / 2), -Math.floor(segSize / 2), segSize, segSize);
+
+                    // Spine ridge glow
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(-2, -Math.floor(segSize / 2) - 1, 4, 3);
+
+                    ctx.restore();
+                }
+
+                // 2. Draw Main Abyssal Leviathan Head & Jaws
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+
+                if (this.stunned > 0) {
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillRect(-32, -32, 64, 64);
+                }
+
+                ctx.rotate(this.angle);
+
+                // Main Head Silhouette
+                ctx.fillStyle = '#020617'; // Outer Outline
+                ctx.fillRect(-28, -22, 52, 44);
+
+                ctx.fillStyle = '#450a0a'; // Dark Maroon Head
+                ctx.fillRect(-26, -20, 48, 40);
+
+                ctx.fillStyle = '#991b1b'; // Crimson Gills
+                ctx.fillRect(-18, -16, 32, 32);
+
+                // Dorsal Fins
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(-10, -26, 12, 6);
+                ctx.fillRect(-10, 20, 12, 6);
+
+                // Animated Jagged Jaws
+                ctx.fillStyle = '#09050d';
+                ctx.fillRect(4, -14 - this.jawOpen, 26, 10);
+                ctx.fillRect(4, 4 + this.jawOpen, 26, 10);
+
+                // Sharp Pixel Teeth
+                ctx.fillStyle = '#f8fafc';
+                for (let t = 6; t < 28; t += 5) {
+                    ctx.fillRect(t, -6 - this.jawOpen, 2, 4);
+                    ctx.fillRect(t, 2 + this.jawOpen, 2, 4);
+                }
+
+                // Glowing Bioluminescent Eyes
+                ctx.fillStyle = '#ff0055';
+                ctx.fillRect(8, -12, 5, 5);
+                ctx.fillRect(8, 7, 5, 5);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(10, -10, 2, 2);
+                ctx.fillRect(10, 9, 2, 2);
+
+                // Angler Lure Wand attached to forehead
+                ctx.fillStyle = '#7f1d1d';
+                ctx.fillRect(12, -22, 3, 8);
+                ctx.fillRect(15, -26, 10, 4);
+                ctx.fillStyle = '#f59e0b'; // Glowing Bait
+                ctx.fillRect(25, -28, 6, 6);
+
+                ctx.restore();
+            }
+        };
+
+        // Salvage Collectibles
+        class Salvage {
+            constructor(type) {
+                this.type = type; // FUEL, REPAIR, FLARE, BOMB
+                this.x = Math.random() * (WORLD_SIZE - 200) + 100;
+                this.y = Math.random() * (WORLD_SIZE - 200) + 100;
+                this.radius = 10;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+
+                // Black outline box
+                ctx.fillStyle = '#020617';
+                ctx.fillRect(-8, -8, 16, 16);
+
+                if (this.type === 'FUEL') {
+                    ctx.fillStyle = '#0284c7';
+                    ctx.fillRect(-6, -6, 12, 12);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(-4, -4, 8, 8);
+                } else if (this.type === 'REPAIR') {
+                    ctx.fillStyle = '#15803d';
+                    ctx.fillRect(-6, -6, 12, 12);
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(-2, -5, 4, 10);
+                    ctx.fillRect(-5, -2, 10, 4);
+                } else if (this.type === 'FLARE') {
+                    ctx.fillStyle = '#b91c1c';
+                    ctx.fillRect(-5, -6, 10, 12);
+                    ctx.fillStyle = '#f87171';
+                    ctx.fillRect(-3, -4, 6, 8);
+                } else if (this.type === 'BOMB') {
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(-6, -6, 12, 12);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillRect(-2, -8, 4, 3);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Active Flare & Bomb Explosions
+        class ActiveFlare {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.life = 180;
+            }
+
+            update() {
+                this.life--;
+                const dist = Math.hypot(this.x - leviathan.x, this.y - leviathan.y);
+                if (dist < 240) leviathan.stunned = 90; // Blinds leviathan
+
+                if (Math.random() < 0.6) {
+                    particles.push(new PixelParticle(
+                        this.x + (Math.random() - 0.5) * 10,
+                        this.y + (Math.random() - 0.5) * 10,
+                        (Math.random() - 0.5) * 2,
+                        (Math.random() - 0.5) * 2,
+                        '#ef4444', 3, 20
+                    ));
+                }
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(Math.floor(this.x) - 4, Math.floor(this.y) - 4, 8, 8);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(Math.floor(this.x) - 2, Math.floor(this.y) - 2, 4, 4);
+            }
+        }
+
+        class ActiveBomb {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.timer = 40;
+            }
+
+            update() {
+                this.timer--;
+                if (this.timer <= 0) {
+                    audio.playExplosion();
+                    cameraShake = 22;
+
+                    const distToLevi = Math.hypot(this.x - leviathan.x, this.y - leviathan.y);
+                    if (distToLevi < 190) {
+                        leviathan.stunned = 150;
+                        popups.push(new PixelPopup(leviathan.x, leviathan.y - 20, "BLAST HIT!", "#f59e0b"));
+                    }
+
+                    for (let i = fishes.length - 1; i >= 0; i--) {
+                        if (Math.hypot(this.x - fishes[i].x, this.y - fishes[i].y) < 130) {
+                            fishes.splice(i, 1);
+                        }
+                    }
+
+                    for (let i = 0; i < 35; i++) {
+                        particles.push(new PixelParticle(
+                            this.x, this.y,
+                            (Math.random() - 0.5) * 7,
+                            (Math.random() - 0.5) * 7,
+                            Math.random() < 0.5 ? '#f59e0b' : '#ef4444', 4, 30
+                        ));
+                    }
+                }
+            }
+
+            draw(ctx) {
+                if (this.timer > 0) {
+                    ctx.fillStyle = (Math.floor(gameTime / 100) % 2 === 0) ? '#ef4444' : '#1e293b';
+                    ctx.fillRect(Math.floor(this.x) - 5, Math.floor(this.y) - 5, 10, 10);
+                }
+            }
+        }
+
+        class PixelParticle {
+            constructor(x, y, vx, vy, color, size, maxLife) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.size = size;
+                this.life = maxLife;
+                this.maxLife = maxLife;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
+            }
+        }
+
+        class PixelPopup {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.life = 60;
+            }
+
+            update() {
+                this.y -= 0.4;
+                this.life--;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.font = '8px "Press Start 2P", monospace';
+                ctx.fillStyle = this.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(this.text, Math.floor(this.x), Math.floor(this.y));
+                ctx.restore();
+            }
+        }
+
+        // Entity Arrays
+        let fishes = [];
+        let salvages = [];
+        let activeFlares = [];
+        let activeBombs = [];
+        let particles = [];
+        let popups = [];
+
+        function generateWorld() {
+            fishes = [];
+            salvages = [];
+            activeFlares = [];
+            activeBombs = [];
+            particles = [];
+            popups = [];
+
+            // Spawn Balanced Fish population
+            for (let i = 0; i < 12; i++) fishes.push(new Fish('MINNOW'));
+            for (let i = 0; i < 6; i++) fishes.push(new Fish('DARTER'));
+            for (let i = 0; i < 4; i++) fishes.push(new Fish('PIKE'));
+            for (let i = 0; i < 2; i++) fishes.push(new Fish('ANGLER'));
+
+            // Spawn Salvage
+            for (let i = 0; i < 5; i++) salvages.push(new Salvage('FUEL'));
+            for (let i = 0; i < 4; i++) salvages.push(new Salvage('REPAIR'));
+            for (let i = 0; i < 4; i++) salvages.push(new Salvage('FLARE'));
+            for (let i = 0; i < 3; i++) salvages.push(new Salvage('BOMB'));
+        }
+
+        // --- GAME LOGIC CONTROLS ---
+
+        function castLine() {
+            if (lure.active) return;
+            lure.cast(player.x, player.y, mouse.worldX, mouse.worldY);
+        }
+
+        function catchFish(fish) {
+            fishCaught++;
+            hudFishCount.innerText = fishCaught;
+
+            const idx = fishes.indexOf(fish);
+            if (idx !== -1) fishes.splice(idx, 1);
+
+            lure.reset();
+
+            if (fish.type === 'MINNOW') {
+                score += 100;
+                popups.push(new PixelPopup(player.x, player.y - 12, "+100 MINNOW!", "#22d3ee"));
+                gameState = 'FISHING';
+                fishes.push(new Fish('MINNOW'));
+            } else if (fish.type === 'DARTER') {
+                score += 250;
+                popups.push(new PixelPopup(player.x, player.y - 12, "+250 DARTER!", "#86efac"));
+                gameState = 'FISHING';
+                fishes.push(new Fish('DARTER'));
+            } else if (fish.type === 'PIKE' || fish.type === 'ANGLER') {
+                score += 650;
+                triggerLeviathanAttack();
+            }
+        }
+
+        function triggerLeviathanAttack() {
+            gameState = 'HORROR';
+            leviathan.init();
+            cameraShake = 20;
+            audio.playSplash();
+            audio.playRoar();
+
+            threatTitle.innerText = "THREAT: LEVIATHAN AWAKENED";
+            threatTitle.className = "text-[8px] text-red-500 font-bold tracking-wider animate-pulse";
+            objectiveDesc.innerText = "OUTRUN MONSTER OR USE FLARES / BOMBS!";
+            document.body.classList.add('blood-pulse');
+
+            popups.push(new PixelPopup(player.x, player.y - 20, "LEVIATHAN AWAKENED!", "#ef4444"));
+        }
+
+        function deployFlare() {
+            if (flares <= 0) return;
+            flares--;
+            flareCountEl.innerText = flares;
+            activeFlares.push(new ActiveFlare(player.x, player.y));
+            audio.playBlip(600, 0.15, 'triangle');
+            popups.push(new PixelPopup(player.x, player.y - 12, "FLARE DROPPED!", "#ef4444"));
+        }
+
+        function deployBomb() {
+            if (bombs <= 0) return;
+            bombs--;
+            bombCountEl.innerText = bombs;
+            activeBombs.push(new ActiveBomb(player.x, player.y));
+            audio.playBlip(200, 0.2, 'sawtooth');
+            popups.push(new PixelPopup(player.x, player.y - 12, "BOMB LAUNCHED!", "#f59e0b"));
+        }
+
+        function togglePause() {
+            if (gameState === 'GAMEOVER' || gameState === 'START') return;
+            if (gameState === 'PAUSED') {
+                gameState = pauseScreen.getAttribute('data-prev') || 'FISHING';
+                pauseScreen.classList.add('hidden');
+                lastTime = performance.now();
+                requestAnimationFrame(gameLoop);
+            } else {
+                pauseScreen.setAttribute('data-prev', gameState);
+                gameState = 'PAUSED';
+                pauseScreen.classList.remove('hidden');
+                audio.stopEngine();
+            }
+        }
+
+        function toggleAudio() {
+            audio.enabled = !audio.enabled;
+            const btn = document.getElementById('audioBtn');
+            btn.innerText = audio.enabled ? "SND: ON" : "SND: OFF";
+            if (!audio.enabled) audio.stopEngine();
+        }
+
+        function toggleCRT() {
+            crtEnabled = !crtEnabled;
+            const crtEl = document.getElementById('crtEffect');
+            const btn = document.getElementById('crtBtn');
+            if (crtEnabled) {
+                crtEl.classList.remove('hidden');
+                btn.innerText = "CRT: ON";
+            } else {
+                crtEl.classList.add('hidden');
+                btn.innerText = "CRT: OFF";
+            }
+        }
+
+        function startGame() {
+            audio.init();
+            player.reset();
+            generateWorld();
+
+            score = 0;
+            fishCaught = 0;
+            gameTime = 0;
+            flares = 3;
+            bombs = 2;
+            flareCountEl.innerText = flares;
+            bombCountEl.innerText = bombs;
+            gameState = 'FISHING';
+
+            document.body.classList.remove('blood-pulse');
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            hud.classList.remove('opacity-0');
+
+            threatTitle.innerText = "WATERS: CLEAR";
+            threatTitle.className = "text-[8px] text-emerald-400 font-bold tracking-wider";
+            objectiveDesc.innerText = "AIM MOUSE & CAST LURE [SPACE / L-CLICK]";
+
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver(reason) {
+            gameState = 'GAMEOVER';
+            audio.stopEngine();
+            audio.playExplosion();
+
+            if (score > highScore) {
+                highScore = Math.floor(score);
+                localStorage.setItem('depth_pixel_hs', highScore.toString());
+            }
+
+            document.getElementById('deathReason').innerText = reason;
+            document.getElementById('finalScore').innerText = Math.floor(score).toLocaleString();
+            document.getElementById('finalFish').innerText = fishCaught;
+            document.getElementById('finalTime').innerText = (gameTime / 1000).toFixed(1) + 's';
+            document.getElementById('finalBest').innerText = highScore.toLocaleString();
+
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // --- MAIN LOOP ---
+
+        function gameLoop(now) {
+            if (gameState === 'PAUSED') return;
+
+            const dt = Math.min(50, now - lastTime);
+            lastTime = now;
+            gameTime += dt;
+
+            update(dt);
+            render();
+
+            if (gameState !== 'GAMEOVER') {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function update(dt) {
+            if (cameraShake > 0) cameraShake *= 0.88;
+
+            player.update();
+            fishes.forEach(f => f.update());
+            lure.update();
+
+            // LOWERED RANDOM LEVIATHAN AWAKENING CHANCE (from 0.0006 down to 0.00015)
+            if (gameState === 'FISHING' && Math.random() < 0.00015) {
+                triggerLeviathanAttack();
+            }
+
+            if (gameState === 'HORROR') {
+                leviathan.update();
+                activeFlares.forEach(f => f.update());
+
+                score += dt * 0.04;
+
+                // Leviathan Collision
+                const distToLevi = Math.hypot(player.x - leviathan.x, player.y - leviathan.y);
+                if (distToLevi < player.radius + leviathan.radius) {
+                    player.hull -= 25;
+                    cameraShake = 22;
+                    audio.playExplosion();
+
+                    // Knockback
+                    leviathan.x -= Math.cos(leviathan.angle) * 100;
+                    leviathan.y -= Math.sin(leviathan.angle) * 100;
+
+                    if (player.hull <= 0) {
+                        gameOver("The giant leviathan crushed your boat to splinters.");
+                    } else {
+                        popups.push(new PixelPopup(player.x, player.y - 12, "HULL DAMAGED!", "#ef4444"));
+                    }
+                }
+            }
+
+            // Update Bombs
+            for (let i = activeBombs.length - 1; i >= 0; i--) {
+                activeBombs[i].update();
+                if (activeBombs[i].timer <= 0) activeBombs.splice(i, 1);
+            }
+
+            // Camera Tracking
+            camera.x += (player.x - camera.w / 2 - camera.x) * 0.1;
+            camera.y += (player.y - camera.h / 2 - camera.y) * 0.1;
+            camera.x = Math.max(0, Math.min(WORLD_SIZE - camera.w, camera.x));
+            camera.y = Math.max(0, Math.min(WORLD_SIZE - camera.h, camera.y));
+
+            // Collect Salvage
+            for (let i = salvages.length - 1; i >= 0; i--) {
+                const s = salvages[i];
+                if (Math.hypot(player.x - s.x, player.y - s.y) < player.radius + s.radius) {
+                    if (s.type === 'FUEL') {
+                        player.fuel = player.maxFuel;
+                        popups.push(new PixelPopup(s.x, s.y, "+FUEL!", "#0284c7"));
+                    } else if (s.type === 'REPAIR') {
+                        player.hull = Math.min(player.maxHull, player.hull + 40);
+                        popups.push(new PixelPopup(s.x, s.y, "+REPAIRED!", "#4ade80"));
+                    } else if (s.type === 'FLARE') {
+                        flares++;
+                        flareCountEl.innerText = flares;
+                        popups.push(new PixelPopup(s.x, s.y, "+FLARE!", "#ef4444"));
+                    } else if (s.type === 'BOMB') {
+                        bombs++;
+                        bombCountEl.innerText = bombs;
+                        popups.push(new PixelPopup(s.x, s.y, "+BOMB!", "#f59e0b"));
+                    }
+                    audio.playBlip(880, 0.1, 'sine');
+                    salvages.splice(i, 1);
+                }
+            }
+
+            // Cleanup
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            for (let i = popups.length - 1; i >= 0; i--) {
+                popups[i].update();
+                if (popups[i].life <= 0) popups.splice(i, 1);
+            }
+
+            // HUD Updates
+            hudScore.innerText = Math.floor(score).toLocaleString();
+            hullBar.style.width = `${Math.max(0, player.hull)}%`;
+            hullText.innerText = `${Math.floor(Math.max(0, player.hull))}%`;
+            fuelBar.style.width = `${Math.max(0, player.fuel)}%`;
+            fuelText.innerText = `${Math.floor(Math.max(0, player.fuel))}%`;
+        }
+
+        function render() {
+            ctx.save();
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Screen Shake
+            const shakeX = Math.floor((Math.random() - 0.5) * cameraShake);
+            const shakeY = Math.floor((Math.random() - 0.5) * cameraShake);
+            ctx.translate(-Math.floor(camera.x) + shakeX, -Math.floor(camera.y) + shakeY);
+
+            // BRIGHT HIGH-CONTRAST OCEAN CANVAS BACKGROUND
+            ctx.fillStyle = gameState === 'HORROR' ? '#111827' : '#0f172a';
+            ctx.fillRect(Math.floor(camera.x), Math.floor(camera.y), camera.w, camera.h);
+
+            // Water Ripple Grid Pattern (Bright Slate / Navy)
+            ctx.fillStyle = gameState === 'HORROR' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(56, 189, 248, 0.18)';
+            const grid = 32;
+            for (let x = Math.floor(camera.x / grid) * grid; x < camera.x + camera.w + grid; x += grid) {
+                for (let y = Math.floor(camera.y / grid) * grid; y < camera.y + camera.h + grid; y += grid) {
+                    ctx.fillRect(x, y, 3, 3);
+                }
+            }
+
+            // Render Searchlight Spotlight Projection FIRST onto Water
+            drawSearchlightBeam(ctx);
+
+            // Render World Entities (Fully Visible and Illuminated)
+            salvages.forEach(s => s.draw(ctx));
+            fishes.forEach(f => f.draw(ctx));
+            lure.draw(ctx);
+            activeFlares.forEach(f => f.draw(ctx));
+            activeBombs.forEach(b => b.draw(ctx));
+
+            if (gameState === 'HORROR') leviathan.draw(ctx);
+
+            player.draw(ctx);
+            particles.forEach(p => p.draw(ctx));
+            popups.forEach(p => p.draw(ctx));
+
+            ctx.restore();
+        }
+
+        function drawSearchlightBeam(ctx) {
+            ctx.save();
+            const boatX = Math.floor(player.x);
+            const boatY = Math.floor(player.y);
+            const aimAngle = player.aimAngle !== undefined ? player.aimAngle : player.angle;
+
+            // 1. Bright Ambient Lantern Ring Around Boat
+            ctx.fillStyle = 'rgba(254, 240, 138, 0.18)';
+            ctx.beginPath();
+            ctx.arc(boatX, boatY, 95, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. High-Powered Directional Searchlight Beam
+            const coneAngle = 0.5;
+            const beamReach = 280;
+
+            const grad = ctx.createRadialGradient(boatX, boatY, 10, boatX, boatY, beamReach);
+            grad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+            grad.addColorStop(0.6, 'rgba(56, 189, 248, 0.25)');
+            grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(boatX, boatY);
+            ctx.arc(boatX, boatY, beamReach, aimAngle - coneAngle, aimAngle + coneAngle);
+            ctx.closePath();
+            ctx.fill();
+
+            // Flares Radius Glow
+            activeFlares.forEach(f => {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
+                ctx.beginPath();
+                ctx.arc(Math.floor(f.x), Math.floor(f.y), 160, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+        }
+
+        // Button Event Bindings
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('resumeBtn').addEventListener('click', togglePause);
+        document.getElementById('audioBtn').addEventListener('click', toggleAudio);
+        document.getElementById('crtBtn').addEventListener('click', toggleCRT);
+        document.getElementById('quitBtn').addEventListener('click', () => {
+            pauseScreen.classList.add('hidden');
+            hud.classList.add('opacity-0');
+            startScreen.classList.remove('hidden');
+            gameState = 'START';
+            audio.stopEngine();
+        });
+
+    </script>
 </body>
 </html>

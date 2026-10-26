@@ -1,21 +1,1724 @@
-﻿<!DOCTYPE html>
-<html lang="et">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Silver — mäng</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; font-family: system-ui, sans-serif; background: #0a0e12; color: #e8f0ff; display: grid; place-items: center; padding: 1.5rem; }
-    a { color: #5eead4; }
-    .box { text-align: center; max-width: 28rem; line-height: 1.6; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UNDERTALE: The Echoing Realms</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font for Pixel/Chiptune Retro Aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #050508;
+            color: #ffffff;
+            font-family: 'Press Start 2P', monospace, monospace;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Canvas & Container Styling */
+        .pixelated {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .retro-border {
+            border: 4px solid #ffffff;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3), inset 0 0 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .retro-border-gold {
+            border: 4px solid #facc15;
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.4), inset 0 0 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .retro-border-red {
+            border: 4px solid #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .retro-btn {
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .retro-btn:hover, .retro-btn:focus {
+            transform: scale(1.03);
+            color: #facc15;
+            text-shadow: 0 0 8px #facc15;
+        }
+
+        .retro-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Pulse Animations */
+        @keyframes heartPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .animate-heart {
+            animation: heartPulse 1s infinite ease-in-out;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 20;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Flash overlay for battle transition */
+        @keyframes flashAnim {
+            0% { opacity: 0; }
+            20% { opacity: 1; background-color: #ffffff; }
+            40% { opacity: 0; }
+            60% { opacity: 1; background-color: #000000; }
+            80% { opacity: 0; }
+            100% { opacity: 1; background-color: transparent; }
+        }
+
+        .battle-flash {
+            animation: flashAnim 0.6s linear forwards;
+        }
+
+        /* Custom Scrollbars for dialogue / logs */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+    </style>
 </head>
-<body>
-  <div class="box">
-    <h1>Silver</h1>
-    <p>Siia tuleb sinu mäng. Asenda see fail või lisa siia oma HTML/CSS/JS.</p>
-    <p><a href="../../index.html">← tagasi dashboardile</a></p>
-  </div>
+<body class="flex flex-col items-center justify-center min-h-screen bg-black text-white select-none scanlines">
+
+    <!-- GAME CONTAINER HUB -->
+    <div id="gameHub" class="relative flex flex-col items-center justify-between w-full max-w-4xl h-full max-h-[920px] p-2 md:p-4 my-auto">
+        
+        <!-- TOP STATUS HEADER BAR -->
+        <header id="topHeader" class="w-full retro-border bg-black p-3 mb-2 flex flex-wrap items-center justify-between text-xs md:text-sm gap-2 z-10">
+            <div class="flex items-center gap-3">
+                <span class="text-red-500 font-bold flex items-center gap-1">
+                    <span class="inline-block text-lg">♥</span> <span id="playerNameDisplay">FRISK</span>
+                </span>
+                <span id="diffBadge" class="bg-emerald-900 text-emerald-300 text-[10px] px-2 py-0.5 rounded border border-emerald-500">NORMAL</span>
+            </div>
+
+            <!-- HP BAR DISPLAY -->
+            <div class="flex items-center gap-2">
+                <span class="text-yellow-400 text-[10px]">HP</span>
+                <div class="w-28 md:w-36 h-4 bg-red-800 border border-white relative rounded-sm overflow-hidden">
+                    <div id="hpBarFill" class="h-full bg-yellow-400 transition-all duration-200" style="width: 100%;"></div>
+                </div>
+                <span id="hpTextDisplay" class="text-[10px] text-white">20/20</span>
+            </div>
+
+            <!-- GOLD / KARMA / ZONE -->
+            <div class="flex items-center gap-4 text-[11px]">
+                <span class="text-yellow-300">G: <span id="goldDisplay">0</span></span>
+                <span class="text-cyan-300">ZONE: <span id="zoneDisplay">Ruins</span></span>
+                <button id="btnQuestLog" class="retro-btn bg-yellow-900/60 hover:bg-yellow-700 text-yellow-300 border border-yellow-500 px-2 py-1 text-[10px]">
+                    QUESTS [Q]
+                </button>
+                <button id="btnSoundToggle" class="retro-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-500 px-2 py-1 text-[10px]">
+                    SFX: ON
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN VIEWPORT / CANVAS BOX -->
+        <main class="relative w-full flex-1 flex items-center justify-center bg-zinc-950 retro-border overflow-hidden">
+            <!-- CANVAS FOR OVERWORLD & BATTLE -->
+            <canvas id="gameCanvas" width="640" height="480" class="pixelated w-full h-full max-w-[640px] max-h-[480px] object-contain bg-black"></canvas>
+
+            <!-- BATTLE OVERLAY SYSTEM (DYNAMIC UI) -->
+            <div id="battleUIOverlay" class="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none hidden z-10">
+                <!-- TOP ENEMY SPEECH / STATUS AREA -->
+                <div id="battleEnemyHeader" class="w-full flex items-start justify-between">
+                    <div class="bg-black/90 border-2 border-white p-2 rounded max-w-xs text-[10px] leading-relaxed text-yellow-200" id="enemySpeechBubble">
+                        "En Garde, Human!"
+                    </div>
+                    <div class="bg-black/80 border border-white p-2 rounded text-right text-[10px]">
+                        <div id="enemyNameDisplay" class="text-yellow-300 font-bold">SLIME</div>
+                        <div class="text-gray-400 text-[9px]">MERCY: <span id="mercyPercentText">0%</span></div>
+                    </div>
+                </div>
+
+                <!-- BATTLE ACTION BUTTONS PANEL -->
+                <div id="battleActionPanel" class="w-full grid grid-cols-4 gap-2 md:gap-4 pointer-events-auto mt-auto pt-2">
+                    <button id="btnFight" class="retro-btn retro-border-red bg-black text-red-500 hover:bg-red-950 py-2 md:py-3 text-xs md:text-sm font-bold flex items-center justify-center gap-1">
+                        ⚔ FIGHT
+                    </button>
+                    <button id="btnAct" class="retro-btn retro-border-gold bg-black text-yellow-400 hover:bg-yellow-950 py-2 md:py-3 text-xs md:text-sm font-bold flex items-center justify-center gap-1">
+                        ★ ACT
+                    </button>
+                    <button id="btnItem" class="retro-btn border-4 border-emerald-500 bg-black text-emerald-400 hover:bg-emerald-950 py-2 md:py-3 text-xs md:text-sm font-bold flex items-center justify-center gap-1">
+                        💼 ITEM
+                    </button>
+                    <button id="btnMercy" class="retro-btn border-4 border-pink-500 bg-black text-pink-400 hover:bg-pink-950 py-2 md:py-3 text-xs md:text-sm font-bold flex items-center justify-center gap-1">
+                        ♥ MERCY
+                    </button>
+                </div>
+            </div>
+
+            <!-- INTERACTIVE DIALOGUE BOX OVERLAY -->
+            <div id="dialogueBox" class="absolute bottom-3 left-3 right-3 bg-black/95 retro-border p-3 md:p-4 text-xs md:text-sm leading-relaxed hidden z-20">
+                <div class="flex items-start gap-3">
+                    <div id="npcPortrait" class="w-12 h-12 bg-zinc-800 border border-white flex items-center justify-center text-xl shrink-0">
+                        🐸
+                    </div>
+                    <div class="flex-1">
+                        <div id="dialogueSpeaker" class="text-yellow-400 text-[10px] mb-1">FROGGIT</div>
+                        <div id="dialogueText" class="text-white min-h-[40px]">Ribbit, ribbit! Welcome to the Underground.</div>
+                        <div id="dialoguePrompt" class="text-right text-[9px] text-gray-400 mt-1 animate-pulse">[SPACE / TOUCH TO CONTINUE]</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-MENU SELECTOR OVERLAY (FOR ACT / ITEM / MERCY LISTS) -->
+            <div id="battleSubMenu" class="absolute inset-x-4 bottom-20 bg-black/95 border-2 border-white p-3 text-xs hidden z-20 pointer-events-auto">
+                <div id="subMenuTitle" class="text-yellow-400 mb-2 border-b border-gray-700 pb-1 text-[11px]">SELECT ACTION</div>
+                <div id="subMenuOptions" class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                    <!-- Dynamic choices rendered via JS -->
+                </div>
+                <button id="btnSubMenuBack" class="mt-3 text-[10px] text-gray-400 hover:text-white underline">← Back</button>
+            </div>
+
+            <!-- FIGHT SLIDER TIMING UI OVERLAY -->
+            <div id="fightTimingOverlay" class="absolute inset-x-8 bottom-24 bg-black/90 border-4 border-white p-4 hidden z-20 pointer-events-auto text-center">
+                <div class="text-xs text-yellow-300 mb-2">HIT SPACE / TAP AT CENTER!</div>
+                <div id="timingTrack" class="relative w-full h-8 bg-zinc-800 border-2 border-gray-400 rounded overflow-hidden flex items-center">
+                    <!-- Target Sweet Spot -->
+                    <div class="absolute left-[42.5%] w-[15%] h-full bg-emerald-500/60 border-x-2 border-emerald-300"></div>
+                    <div class="absolute left-[47.5%] w-[5%] h-full bg-yellow-300/80"></div>
+                    <!-- Moving Cursor -->
+                    <div id="timingCursor" class="absolute top-0 bottom-0 w-2 bg-white shadow-[0_0_8px_#fff]"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TOUCH CONTROLS FOR MOBILE DEVICES -->
+        <footer id="touchControls" class="w-full flex items-center justify-between pt-2 px-1 gap-2 z-10 md:hidden">
+            <!-- D-PAD -->
+            <div class="grid grid-cols-3 gap-1 w-32 h-32">
+                <div></div>
+                <button id="btnPadUp" class="bg-zinc-800 border border-zinc-500 active:bg-zinc-600 rounded flex items-center justify-center text-lg font-bold">▲</button>
+                <div></div>
+                <button id="btnPadLeft" class="bg-zinc-800 border border-zinc-500 active:bg-zinc-600 rounded flex items-center justify-center text-lg font-bold">◀</button>
+                <div class="bg-zinc-900 rounded border border-zinc-700 flex items-center justify-center text-[9px] text-zinc-500">DPAD</div>
+                <button id="btnPadRight" class="bg-zinc-800 border border-zinc-500 active:bg-zinc-600 rounded flex items-center justify-center text-lg font-bold">▶</button>
+                <div></div>
+                <button id="btnPadDown" class="bg-zinc-800 border border-zinc-500 active:bg-zinc-600 rounded flex items-center justify-center text-lg font-bold">▼</button>
+                <div></div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="flex gap-2">
+                <button id="btnTouchInteract" class="w-16 h-16 rounded-full bg-emerald-900 border-2 border-emerald-400 active:bg-emerald-700 text-emerald-200 text-xs font-bold flex items-center justify-center shadow-lg">
+                    [E]<br>ACT
+                </button>
+                <button id="btnTouchQuest" class="w-16 h-16 rounded-full bg-yellow-900 border-2 border-yellow-400 active:bg-yellow-700 text-yellow-200 text-xs font-bold flex items-center justify-center shadow-lg">
+                    [Q]<br>LOG
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL OVERLAY: TITLE & DIFFICULTY SELECTION -->
+    <div id="modalTitle" class="fixed inset-0 bg-black/95 flex flex-col items-center justify-center p-4 z-50">
+        <div class="max-w-xl w-full text-center space-y-6 bg-zinc-950 p-6 rounded-lg retro-border">
+            <h1 class="text-xl md:text-3xl text-red-500 font-bold tracking-widest leading-tight">
+                UNDERTALE
+            </h1>
+            <p class="text-xs text-yellow-300 tracking-wider">THE ECHOING REALMS</p>
+
+            <div class="text-[10px] md:text-xs text-gray-300 space-y-2 border-y border-zinc-800 py-3">
+                <p>Choose your determination before venturing into the Underground:</p>
+            </div>
+
+            <!-- DIFFICULTY SELECTION GRID -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                <button data-diff="EASY" class="diff-btn retro-btn p-3 border-2 border-emerald-500 bg-emerald-950/30 hover:bg-emerald-900/60 rounded">
+                    <div class="text-emerald-400 font-bold text-xs">EASY MODE</div>
+                    <div class="text-[9px] text-emerald-200 mt-1">100 HP, 2x ATK, 0.5x DMG taken, forgiving bullet speeds.</div>
+                </button>
+
+                <button data-diff="NORMAL" class="diff-btn retro-btn p-3 border-2 border-cyan-500 bg-cyan-950/30 hover:bg-cyan-900/60 rounded">
+                    <div class="text-cyan-400 font-bold text-xs">NORMAL MODE</div>
+                    <div class="text-[9px] text-cyan-200 mt-1">20 HP, standard Undertale mechanics & bullet speeds.</div>
+                </button>
+
+                <button data-diff="HARD" class="diff-btn retro-btn p-3 border-2 border-orange-500 bg-orange-950/30 hover:bg-orange-900/60 rounded">
+                    <div class="text-orange-400 font-bold text-xs">HARD MODE</div>
+                    <div class="text-[9px] text-orange-200 mt-1">15 HP, 1.5x enemy DMG, faster bullet hells, items -20% heal.</div>
+                </button>
+
+                <button data-diff="HARDCORE" class="diff-btn retro-btn p-3 border-2 border-red-600 bg-red-950/40 hover:bg-red-900/70 rounded">
+                    <div class="text-red-500 font-bold text-xs">HARDCORE MODE ☠</div>
+                    <div class="text-[9px] text-red-300 mt-1">10 HP, aggressive patterns, PERMADEATH (deletes save)!</div>
+                </button>
+            </div>
+
+            <div class="pt-2 text-[9px] text-gray-500">
+                High Score Victories Saved: <span id="highScoreText" class="text-yellow-400">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: QUEST LOG -->
+    <div id="modalQuestLog" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-40 hidden">
+        <div class="max-w-lg w-full bg-zinc-950 retro-border-gold p-5 rounded text-left space-y-4">
+            <div class="flex items-center justify-between border-b border-yellow-600/50 pb-2">
+                <h2 class="text-yellow-400 text-sm font-bold flex items-center gap-2">
+                    📜 QUEST LOG & JOURNAL
+                </h2>
+                <button id="btnCloseQuestLog" class="text-xs text-gray-400 hover:text-white">[X] CLOSE</button>
+            </div>
+
+            <div id="questListContainer" class="space-y-3 max-h-80 overflow-y-auto text-xs pr-1">
+                <!-- Quests generated dynamically -->
+            </div>
+
+            <div class="text-[9px] text-gray-400 pt-2 border-t border-zinc-800 flex justify-between">
+                <span>PACIFIST KARMA: <span id="karmaScoreText" class="text-emerald-400">100%</span></span>
+                <span>PRESS 'Q' OR TAP CLOSE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: GAME OVER -->
+    <div id="modalGameOver" class="fixed inset-0 bg-black/95 flex flex-col items-center justify-center p-4 z-50 hidden">
+        <div class="max-w-md w-full text-center space-y-5 bg-zinc-950 border-4 border-red-600 p-6 rounded">
+            <h2 class="text-2xl text-red-600 font-bold tracking-widest animate-pulse">GAME OVER</h2>
+            <p id="gameOverSubtext" class="text-xs text-gray-300 leading-relaxed">
+                You lost your determination... Stay determined!
+            </p>
+            <div id="hardcoreWipeText" class="text-[10px] text-red-400 hidden font-bold">
+                ⚠️ HARDCORE MODE PERMADEATH: SAVE DATA WIPED!
+            </div>
+            <button id="btnRestartGame" class="retro-btn w-full bg-red-900 hover:bg-red-800 text-white border-2 border-red-400 py-3 text-xs font-bold rounded">
+                TRY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: VICTORY SCREEN -->
+    <div id="modalVictory" class="fixed inset-0 bg-black/95 flex flex-col items-center justify-center p-4 z-50 hidden">
+        <div class="max-w-lg w-full text-center space-y-5 bg-zinc-950 border-4 border-yellow-400 p-6 rounded">
+            <h2 class="text-2xl text-yellow-400 font-bold tracking-widest">VICTORY!</h2>
+            <div class="text-xs text-emerald-300">You saved the Underground and reached the Barrier!</div>
+            
+            <div class="bg-zinc-900 border border-zinc-700 p-4 rounded text-xs space-y-2 text-left">
+                <div class="flex justify-between"><span>Difficulty Mode:</span> <span id="vicDiffText" class="text-yellow-300">NORMAL</span></div>
+                <div class="flex justify-between"><span>Final Level:</span> <span id="vicLvText" class="text-cyan-300">LV 1</span></div>
+                <div class="flex justify-between"><span>Ending Rank:</span> <span id="vicEndingText" class="text-emerald-400">TRUE PACIFIST</span></div>
+                <div class="flex justify-between"><span>Gold Remaining:</span> <span id="vicGoldText" class="text-yellow-400">0</span></div>
+            </div>
+
+            <button id="btnVictoryRestart" class="retro-btn w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold py-3 text-xs rounded">
+                PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME LOGIC ENGINE -->
+    <script>
+        /* ==========================================================================
+           1. WEB AUDIO API CHIPTUNE AUDIO ENGINE
+           ========================================================================== */
+        class RetroAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playBeep(freq = 440, type = 'square', duration = 0.08, vol = 0.1) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    // Audio context safeguard
+                }
+            }
+
+            playTalkBlip() {
+                this.playBeep(220 + Math.random() * 60, 'square', 0.04, 0.05);
+            }
+
+            playSelect() {
+                this.playBeep(587.33, 'triangle', 0.08, 0.1);
+            }
+
+            playHit() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.25);
+                } catch(e) {}
+            }
+
+            playHeal() {
+                if (!this.enabled) return;
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        this.playBeep(freq, 'sine', 0.12, 0.1);
+                    }, idx * 60);
+                });
+            }
+
+            playFanfare() {
+                if (!this.enabled) return;
+                const sequence = [
+                    { f: 392, d: 0.15 }, { f: 392, d: 0.15 }, { f: 392, d: 0.15 },
+                    { f: 523.25, d: 0.4 }
+                ];
+                sequence.forEach((item, idx) => {
+                    setTimeout(() => {
+                        this.playBeep(item.f, 'triangle', item.d, 0.12);
+                    }, idx * 160);
+                });
+            }
+
+            playEncounter() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.35);
+
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.35);
+                } catch(e) {}
+            }
+        }
+
+        const audio = new RetroAudioEngine();
+
+        /* ==========================================================================
+           2. GAME DATA & DIFFICULTY MODES
+           ========================================================================== */
+        const DIFFICULTIES = {
+            EASY: {
+                name: 'EASY',
+                maxHp: 100,
+                atkMult: 2.0,
+                defMult: 0.5,
+                mercySpeed: 1.5,
+                healMult: 1.2,
+                permadeath: false
+            },
+            NORMAL: {
+                name: 'NORMAL',
+                maxHp: 20,
+                atkMult: 1.0,
+                defMult: 1.0,
+                mercySpeed: 1.0,
+                healMult: 1.0,
+                permadeath: false
+            },
+            HARD: {
+                name: 'HARD',
+                maxHp: 15,
+                atkMult: 0.8,
+                defMult: 1.5,
+                mercySpeed: 0.8,
+                healMult: 0.8,
+                permadeath: false
+            },
+            HARDCORE: {
+                name: 'HARDCORE',
+                maxHp: 10,
+                atkMult: 0.7,
+                defMult: 2.0,
+                mercySpeed: 0.7,
+                healMult: 0.7,
+                permadeath: true
+            }
+        };
+
+        // Item database
+        const ITEMS = {
+            candy: { name: 'Monster Candy', heal: 10, desc: 'Heals 10 HP. Sweet and nostalgic.' },
+            pie: { name: 'Butterscotch Pie', heal: 30, desc: 'Heals 30 HP. Smells heavenly.' },
+            donut: { name: 'Spider Donut', heal: 12, desc: 'Heals 12 HP. Made by spiders for spiders.' },
+            hotdog: { name: 'Hot Dog', heal: 15, desc: 'Heals 15 HP. Has a friendly scent.' },
+            ribbon: { name: 'Lost Ribbon', heal: 0, quest: true, desc: 'A cute pink ribbon. Return to Frog NPC.' }
+        };
+
+        /* ==========================================================================
+           3. MAIN GAME STATE MANAGEMENT
+           ========================================================================== */
+        const gameState = {
+            mode: 'TITLE', // TITLE, OVERWORLD, DIALOGUE, BATTLE, QUEST_LOG, GAME_OVER, VICTORY
+            diff: DIFFICULTIES.NORMAL,
+            player: {
+                x: 120,
+                y: 200,
+                width: 20,
+                height: 20,
+                speed: 2.5,
+                hp: 20,
+                maxHp: 20,
+                gold: 25,
+                lv: 1,
+                exp: 0,
+                zone: 'Ruins',
+                inventory: ['candy', 'pie'],
+                sparesCount: 0,
+                killsCount: 0,
+                bossesResolved: 0
+            },
+            quests: [
+                {
+                    id: 'q1',
+                    title: 'The Barrier\'s Guardians',
+                    desc: 'Encounter and resolve the 3 Zone Bosses (Froggit Boss, Papyrus, Undyne Guardian) by Fighting or Sparing.',
+                    completed: false,
+                    progress: '0/3 Bosses'
+                },
+                {
+                    id: 'q2',
+                    title: 'The Missing Ribbon',
+                    desc: 'Find the Lost Ribbon in Ruins chest and bring it to Froggit.',
+                    completed: false,
+                    progress: 'Not Found'
+                },
+                {
+                    id: 'q3',
+                    title: 'Chef\'s Secret Recipe',
+                    desc: 'Collect a Spider Donut and Hot Dog to give to Skeleton Chef in Snowdin.',
+                    completed: false,
+                    progress: 'Missing Items'
+                },
+                {
+                    id: 'q4',
+                    title: 'True Pacifist',
+                    desc: 'Spare 3 regular enemies without causing any harm.',
+                    completed: false,
+                    progress: '0/3 Spared'
+                }
+            ],
+            currentNPC: null,
+            dialogueQueue: [],
+            dialogueCallback: null,
+            battle: {
+                enemy: null,
+                turn: 'PLAYER', // PLAYER, ACT_SELECT, ITEM_SELECT, MERCY_SELECT, FIGHT_TIMING, ENEMY_TURN
+                mercyPct: 0,
+                timingPos: 0,
+                timingSpeed: 2.5,
+                timingDir: 1,
+                soulX: 320,
+                soulY: 340,
+                soulSpeed: 3,
+                soulIframe: 0,
+                boxBounds: { x: 200, y: 260, w: 240, h: 160 },
+                bullets: [],
+                turnTimer: 0
+            },
+            victories: 0
+        };
+
+        /* ==========================================================================
+           4. ZONES, MAPS & OVERWORLD OBJECTS
+           ========================================================================== */
+        const MAP_BOUNDS = { width: 640, height: 480 };
+
+        const ZONES = {
+            Ruins: {
+                bgColor: '#1e112a',
+                borderColor: '#4c1d95',
+                walls: [
+                    { x: 0, y: 0, w: 640, h: 40 },
+                    { x: 0, y: 440, w: 640, h: 40 },
+                    { x: 0, y: 0, w: 40, h: 480 },
+                    { x: 600, y: 0, w: 40, h: 180 },
+                    { x: 600, y: 300, w: 40, h: 180 },
+                    { x: 200, y: 100, w: 120, h: 40 }
+                ],
+                npcs: [
+                    {
+                        id: 'frog_npc',
+                        name: 'FROGGIT',
+                        icon: '🐸',
+                        x: 180,
+                        y: 160,
+                        w: 24,
+                        h: 24,
+                        dialogue: [
+                            "Ribbit, ribbit! Human, have you seen my Lost Ribbon?",
+                            "I left it in a chest nearby. If you find it, please return it to me!"
+                        ]
+                    },
+                    {
+                        id: 'ruins_boss',
+                        name: 'GUARD FROGGIT (BOSS)',
+                        icon: '👑🐸',
+                        x: 520,
+                        y: 220,
+                        w: 32,
+                        h: 32,
+                        isBoss: true,
+                        dialogue: [
+                            "HALT! I am the Keeper of the Ruins Gate!",
+                            "To proceed to Snowdin, you must prove your heart in battle!"
+                        ]
+                    }
+                ],
+                chests: [
+                    { id: 'chest_ribbon', x: 80, y: 80, w: 24, h: 24, item: 'ribbon', opened: false }
+                ],
+                saveStars: [
+                    { x: 100, y: 240, w: 20, h: 20 }
+                ],
+                exit: { target: 'Snowdin', x: 590, y: 210, w: 10, h: 80, spawnX: 60, spawnY: 220 }
+            },
+            Snowdin: {
+                bgColor: '#0f172a',
+                borderColor: '#0284c7',
+                walls: [
+                    { x: 0, y: 0, w: 640, h: 40 },
+                    { x: 0, y: 440, w: 640, h: 40 },
+                    { x: 0, y: 0, w: 40, h: 180 },
+                    { x: 0, y: 300, w: 40, h: 180 },
+                    { x: 600, y: 0, w: 40, h: 180 },
+                    { x: 600, y: 300, w: 40, h: 180 },
+                    { x: 300, y: 80, w: 100, h: 100 }
+                ],
+                npcs: [
+                    {
+                        id: 'chef_papyrus',
+                        name: 'SKELETON CHEF',
+                        icon: '💀',
+                        x: 220,
+                        y: 120,
+                        w: 28,
+                        h: 28,
+                        dialogue: [
+                            "NYEH HEH HEH! WELCOME TO SNOWDIN!",
+                            "I am baking a grand culinary masterpiece, but I need a Spider Donut and Hot Dog!",
+                            "Bring them to me for a delicious reward!"
+                        ]
+                    },
+                    {
+                        id: 'snowdin_boss',
+                        name: 'PAPYRUS (BOSS)',
+                        icon: '🦴',
+                        x: 520,
+                        y: 220,
+                        w: 32,
+                        h: 32,
+                        isBoss: true,
+                        dialogue: [
+                            "HUMAN! YOU DARED REACH SNOWDIN'S BORDER!",
+                            "PREPARE TO FACE MY SPECIAL BONE ATTACK!"
+                        ]
+                    }
+                ],
+                chests: [
+                    { id: 'chest_donut', x: 120, y: 380, w: 24, h: 24, item: 'donut', opened: false }
+                ],
+                saveStars: [
+                    { x: 80, y: 220, w: 20, h: 20 }
+                ],
+                exit: { target: 'Hotland', x: 590, y: 210, w: 10, h: 80, spawnX: 60, spawnY: 220 },
+                prevExit: { target: 'Ruins', x: 0, y: 210, w: 10, h: 80, spawnX: 570, spawnY: 220 }
+            },
+            Hotland: {
+                bgColor: '#2a080c',
+                borderColor: '#dc2626',
+                walls: [
+                    { x: 0, y: 0, w: 640, h: 40 },
+                    { x: 0, y: 440, w: 640, h: 40 },
+                    { x: 0, y: 0, w: 40, h: 180 },
+                    { x: 0, y: 300, w: 40, h: 180 },
+                    { x: 600, y: 0, w: 40, h: 480 },
+                    { x: 150, y: 120, w: 40, h: 240 },
+                    { x: 450, y: 120, w: 40, h: 240 }
+                ],
+                npcs: [
+                    {
+                        id: 'hotland_boss',
+                        name: 'UNDYNE GUARDIAN (FINAL BOSS)',
+                        icon: '🛡️',
+                        x: 310,
+                        y: 100,
+                        w: 36,
+                        h: 36,
+                        isBoss: true,
+                        dialogue: [
+                            "YOU HAVE COME FAR, HUMAN!",
+                            "BEYOND THIS CASTLE LIES THE BARRIER TO THE SURFACE WORLD!",
+                            "SHOW ME THE FULL POWER OF YOUR DETERMINATION!"
+                        ]
+                    }
+                ],
+                chests: [
+                    { id: 'chest_hotdog', x: 80, y: 80, w: 24, h: 24, item: 'hotdog', opened: false }
+                ],
+                saveStars: [
+                    { x: 80, y: 220, w: 20, h: 20 }
+                ],
+                prevExit: { target: 'Snowdin', x: 0, y: 210, w: 10, h: 80, spawnX: 570, spawnY: 220 }
+            }
+        };
+
+        /* ==========================================================================
+           5. ENEMY TEMPLATES FOR BATTLES
+           ========================================================================== */
+        const ENEMIES = {
+            froggit: {
+                name: 'Froggit',
+                hp: 30,
+                maxHp: 30,
+                atk: 4,
+                sprite: '🐸',
+                acts: ['Check', 'Flirt', 'Threaten', 'Tell Joke'],
+                speech: ["Ribbit...", "Croak!", "Hop hop!"],
+                bulletPattern: 'fireballs'
+            },
+            boss_froggit: {
+                name: 'Guard Froggit',
+                hp: 60,
+                maxHp: 60,
+                atk: 6,
+                isBoss: true,
+                sprite: '👑🐸',
+                acts: ['Check', 'Bow Respectfully', 'Offer Candy'],
+                speech: ["I guard this realm!", "Show me your worth!"],
+                bulletPattern: 'fireball_rain'
+            },
+            boss_papyrus: {
+                name: 'Papyrus',
+                hp: 100,
+                maxHp: 100,
+                atk: 8,
+                isBoss: true,
+                sprite: '💀',
+                acts: ['Check', 'Flirt', 'Praise Cooking', 'Tell Bone Joke'],
+                speech: ["NYEH HEH HEH!", "BEHOLD MY BONES!"],
+                bulletPattern: 'bones'
+            },
+            boss_undyne: {
+                name: 'Undyne Guardian',
+                hp: 160,
+                maxHp: 160,
+                atk: 12,
+                isBoss: true,
+                sprite: '🛡️',
+                acts: ['Check', 'Challenge', 'Plead', 'Smile'],
+                speech: ["NGAAAHHH!", "NEVER GIVE UP!"],
+                bulletPattern: 'lasers_and_spears'
+            }
+        };
+
+        /* ==========================================================================
+           6. INPUT & CONTROLS MANAGEMENT
+           ========================================================================== */
+        const keys = {};
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            keys[e.code] = true;
+
+            // Shortcut keys
+            if (e.key === 'q' || e.key === 'Q') {
+                toggleQuestLog();
+            }
+            if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
+                if (gameState.mode === 'OVERWORLD') {
+                    checkOverworldInteract();
+                } else if (gameState.mode === 'DIALOGUE') {
+                    advanceDialogue();
+                } else if (gameState.mode === 'BATTLE' && gameState.battle.turn === 'FIGHT_TIMING') {
+                    executePlayerAttack();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            keys[e.code] = false;
+        });
+
+        window.addEventListener('blur', () => {
+            for (let k in keys) keys[k] = false;
+        });
+
+        // Touch Control Binding Setup
+        function setupTouchControls() {
+            const bindTouch = (id, keyName) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                const start = (e) => { e.preventDefault(); keys[keyName] = true; };
+                const end = (e) => { e.preventDefault(); keys[keyName] = false; };
+                btn.addEventListener('touchstart', start, { passive: false });
+                btn.addEventListener('touchend', end, { passive: false });
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('mouseup', end);
+            };
+
+            bindTouch('btnPadUp', 'ArrowUp');
+            bindTouch('btnPadDown', 'ArrowDown');
+            bindTouch('btnPadLeft', 'ArrowLeft');
+            bindTouch('btnPadRight', 'ArrowRight');
+
+            document.getElementById('btnTouchInteract').addEventListener('click', () => {
+                if (gameState.mode === 'OVERWORLD') checkOverworldInteract();
+                else if (gameState.mode === 'DIALOGUE') advanceDialogue();
+                else if (gameState.mode === 'BATTLE' && gameState.battle.turn === 'FIGHT_TIMING') executePlayerAttack();
+            });
+
+            document.getElementById('btnTouchQuest').addEventListener('click', toggleQuestLog);
+        }
+
+        /* ==========================================================================
+           7. MAIN LOOP & RENDERING
+           ========================================================================== */
+        let canvas, ctx;
+
+        function initCanvas() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+        }
+
+        let lastTime = performance.now();
+        function gameLoop(now) {
+            const dt = Math.min((now - lastTime) / 1000, 0.1);
+            lastTime = now;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            if (gameState.mode === 'OVERWORLD') {
+                updateOverworld(dt);
+            } else if (gameState.mode === 'BATTLE') {
+                updateBattle(dt);
+            }
+        }
+
+        /* OVERWORLD UPDATE LOGIC */
+        function updateOverworld(dt) {
+            const p = gameState.player;
+            let dx = 0, dy = 0;
+
+            if (keys['ArrowUp'] || keys['KeyW'] || keys['w']) dy -= 1;
+            if (keys['ArrowDown'] || keys['KeyS'] || keys['s']) dy += 1;
+            if (keys['ArrowLeft'] || keys['KeyA'] || keys['a']) dx -= 1;
+            if (keys['ArrowRight'] || keys['KeyD'] || keys['d']) dx += 1;
+
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
+
+            const newX = p.x + dx * p.speed;
+            const newY = p.y + dy * p.speed;
+
+            // Collisions with Zone Walls
+            const currentZone = ZONES[p.zone];
+            let collideX = false, collideY = false;
+
+            for (let wall of currentZone.walls) {
+                if (checkAABB({ x: newX, y: p.y, w: p.width, h: p.height }, wall)) collideX = true;
+                if (checkAABB({ x: p.x, y: newY, w: p.width, h: p.height }, wall)) collideY = true;
+            }
+
+            if (!collideX) p.x = newX;
+            if (!collideY) p.y = newY;
+
+            // Random Wild Encounter Check (if moving in wild zones)
+            if ((dx !== 0 || dy !== 0) && Math.random() < 0.002) {
+                triggerRandomEncounter();
+            }
+
+            // Zone Exit Transitions
+            if (currentZone.exit && checkAABB({ x: p.x, y: p.y, w: p.width, h: p.height }, currentZone.exit)) {
+                p.zone = currentZone.exit.target;
+                p.x = currentZone.exit.spawnX;
+                p.y = currentZone.exit.spawnY;
+                updateHeaderUI();
+                showToast(`Entered ${p.zone}`);
+            } else if (currentZone.prevExit && checkAABB({ x: p.x, y: p.y, w: p.width, h: p.height }, currentZone.prevExit)) {
+                p.zone = currentZone.prevExit.target;
+                p.x = currentZone.prevExit.spawnX;
+                p.y = currentZone.prevExit.spawnY;
+                updateHeaderUI();
+                showToast(`Entered ${p.zone}`);
+            }
+        }
+
+        function checkAABB(a, b) {
+            return a.x < b.x + b.w && a.x + a.w > b.x &&
+                   a.y < b.y + b.h && a.y + a.h > b.y;
+        }
+
+        /* OVERWORLD INTERACTION */
+        function checkOverworldInteract() {
+            const p = gameState.player;
+            const zone = ZONES[p.zone];
+
+            // 1. Check Save Stars
+            for (let star of zone.saveStars) {
+                if (Math.hypot(p.x - star.x, p.y - star.y) < 35) {
+                    p.hp = p.maxHp;
+                    updateHeaderUI();
+                    saveGameToStorage();
+                    audio.playHeal();
+                    startDialogue("SAVE STAR", "HP fully restored! Determination saved to storage.", "⭐");
+                    return;
+                }
+            }
+
+            // 2. Check Chests
+            for (let chest of zone.chests) {
+                if (!chest.opened && Math.hypot(p.x - chest.x, p.y - chest.y) < 35) {
+                    chest.opened = true;
+                    p.inventory.push(chest.item);
+                    audio.playSelect();
+                    const itemName = ITEMS[chest.item] ? ITEMS[chest.item].name : chest.item;
+                    startDialogue("TREASURE CHEST", `You opened the chest and found [${itemName}]!`, "📦");
+
+                    if (chest.item === 'ribbon') {
+                        updateQuestProgress('q2', 'Ribbon Found! Return to Froggit.');
+                    }
+                    return;
+                }
+            }
+
+            // 3. Check NPCs
+            for (let npc of zone.npcs) {
+                if (Math.hypot(p.x - npc.x, p.y - npc.y) < 40) {
+                    // Check special quest interactions
+                    if (npc.id === 'frog_npc') {
+                        if (p.inventory.includes('ribbon')) {
+                            // Give ribbon
+                            p.inventory = p.inventory.filter(i => i !== 'ribbon');
+                            p.gold += 30;
+                            completeQuest('q2');
+                            audio.playFanfare();
+                            startDialogue(npc.name, "Ribbit! You found my Lost Ribbon! Thank you so much! Here is 30 Gold!", npc.icon);
+                            return;
+                        }
+                    } else if (npc.id === 'chef_papyrus') {
+                        if (p.inventory.includes('donut') && p.inventory.includes('hotdog')) {
+                            p.inventory = p.inventory.filter(i => i !== 'donut' && i !== 'hotdog');
+                            p.inventory.push('pie');
+                            p.gold += 50;
+                            completeQuest('q3');
+                            audio.playFanfare();
+                            startDialogue(npc.name, "NYEH HEH HEH! PERFECT INGREDIENTS! TAKE THIS GRAND BUTTERSCOTCH PIE & 50 GOLD!", npc.icon);
+                            return;
+                        }
+                    }
+
+                    if (npc.isBoss) {
+                        // Start Boss Fight!
+                        startDialogue(npc.name, npc.dialogue[0], npc.icon, () => {
+                            let bossKey = 'boss_froggit';
+                            if (npc.id === 'snowdin_boss') bossKey = 'boss_papyrus';
+                            if (npc.id === 'hotland_boss') bossKey = 'boss_undyne';
+                            startBattle(ENEMIES[bossKey]);
+                        });
+                    } else {
+                        startDialogue(npc.name, npc.dialogue, npc.icon);
+                    }
+                    return;
+                }
+            }
+        }
+
+        /* ==========================================================================
+           8. DIALOGUE ENGINE
+           ========================================================================== */
+        let typeTimer = null;
+
+        function startDialogue(speaker, textOrArray, portraitIcon = '💬', callback = null) {
+            gameState.mode = 'DIALOGUE';
+            gameState.dialogueCallback = callback;
+            gameState.dialogueQueue = Array.isArray(textOrArray) ? [...textOrArray] : [textOrArray];
+
+            const box = document.getElementById('dialogueBox');
+            const speakerElem = document.getElementById('dialogueSpeaker');
+            const portraitElem = document.getElementById('npcPortrait');
+
+            speakerElem.innerText = speaker;
+            portraitElem.innerText = portraitIcon;
+            box.classList.remove('hidden');
+
+            displayNextDialogueSentence();
+        }
+
+        function displayNextDialogueSentence() {
+            if (gameState.dialogueQueue.length === 0) {
+                closeDialogue();
+                return;
+            }
+
+            const sentence = gameState.dialogueQueue.shift();
+            const textElem = document.getElementById('dialogueText');
+            textElem.innerText = "";
+
+            let idx = 0;
+            if (typeTimer) clearInterval(typeTimer);
+
+            typeTimer = setInterval(() => {
+                if (idx < sentence.length) {
+                    textElem.innerText += sentence[idx];
+                    if (idx % 2 === 0) audio.playTalkBlip();
+                    idx++;
+                } else {
+                    clearInterval(typeTimer);
+                }
+            }, 25);
+        }
+
+        function advanceDialogue() {
+            const textElem = document.getElementById('dialogueText');
+            // If still typing, skip to full text
+            if (typeTimer) {
+                clearInterval(typeTimer);
+                typeTimer = null;
+            }
+            if (gameState.dialogueQueue.length > 0) {
+                displayNextDialogueSentence();
+            } else {
+                closeDialogue();
+            }
+        }
+
+        function closeDialogue() {
+            document.getElementById('dialogueBox').classList.add('hidden');
+            const cb = gameState.dialogueCallback;
+            gameState.dialogueCallback = null;
+            gameState.mode = 'OVERWORLD';
+
+            if (cb) cb();
+        }
+
+        /* ==========================================================================
+           9. BATTLE SYSTEM & BULLET HELL ENGINE
+           ========================================================================== */
+        function triggerRandomEncounter() {
+            audio.playEncounter();
+            startBattle(ENEMIES.froggit);
+        }
+
+        function startBattle(enemyTemplate) {
+            const flashOverlay = document.createElement('div');
+            flashOverlay.className = 'fixed inset-0 battle-flash z-50 pointer-events-none';
+            document.body.appendChild(flashOverlay);
+            setTimeout(() => flashOverlay.remove(), 600);
+
+            audio.playEncounter();
+
+            gameState.mode = 'BATTLE';
+            gameState.battle.enemy = JSON.parse(JSON.stringify(enemyTemplate));
+            gameState.battle.mercyPct = 0;
+            gameState.battle.turn = 'PLAYER';
+            gameState.battle.soulX = 320;
+            gameState.battle.soulY = 340;
+            gameState.battle.bullets = [];
+
+            document.getElementById('battleUIOverlay').classList.remove('hidden');
+            document.getElementById('enemySpeechBubble').innerText = `"${enemyTemplate.speech[0]}"`;
+            document.getElementById('enemyNameDisplay').innerText = enemyTemplate.name.toUpperCase();
+            document.getElementById('mercyPercentText').innerText = "0%";
+
+            updateBattleButtonsState();
+        }
+
+        function updateBattleButtonsState() {
+            const isPlayerTurn = (gameState.battle.turn === 'PLAYER');
+            document.getElementById('btnFight').disabled = !isPlayerTurn;
+            document.getElementById('btnAct').disabled = !isPlayerTurn;
+            document.getElementById('btnItem').disabled = !isPlayerTurn;
+            document.getElementById('btnMercy').disabled = !isPlayerTurn;
+        }
+
+        /* BATTLE BUTTON ACTIONS */
+        document.getElementById('btnFight').addEventListener('click', () => {
+            if (gameState.battle.turn !== 'PLAYER') return;
+            audio.playSelect();
+            gameState.battle.turn = 'FIGHT_TIMING';
+            gameState.battle.timingPos = 0;
+            gameState.battle.timingDir = 1;
+            document.getElementById('fightTimingOverlay').classList.remove('hidden');
+        });
+
+        document.getElementById('btnAct').addEventListener('click', () => {
+            if (gameState.battle.turn !== 'PLAYER') return;
+            audio.playSelect();
+            openSubMenu('ACT', gameState.battle.enemy.acts, (actName) => {
+                executeActChoice(actName);
+            });
+        });
+
+        document.getElementById('btnItem').addEventListener('click', () => {
+            if (gameState.battle.turn !== 'PLAYER') return;
+            audio.playSelect();
+            const itemNames = gameState.player.inventory.map(key => ITEMS[key] ? ITEMS[key].name : key);
+            openSubMenu('ITEM', itemNames.length ? itemNames : ['No Items'], (itemName) => {
+                executeItemChoice(itemName);
+            });
+        });
+
+        document.getElementById('btnMercy').addEventListener('click', () => {
+            if (gameState.battle.turn !== 'PLAYER') return;
+            audio.playSelect();
+            openSubMenu('MERCY', ['SPARE', 'FLEE'], (mercyChoice) => {
+                if (mercyChoice === 'SPARE') {
+                    if (gameState.battle.mercyPct >= 100) {
+                        audio.playFanfare();
+                        gameState.player.sparesCount++;
+                        updateQuestProgress('q4', `${gameState.player.sparesCount}/3 Spared`);
+
+                        if (gameState.player.sparesCount >= 3) {
+                            completeQuest('q4');
+                        }
+
+                        if (gameState.battle.enemy.isBoss) {
+                            gameState.player.bossesResolved++;
+                            updateQuestProgress('q1', `${gameState.player.bossesResolved}/3 Bosses`);
+                            if (gameState.player.bossesResolved >= 3) {
+                                completeQuest('q1');
+                                triggerVictoryScreen();
+                                return;
+                            }
+                        }
+
+                        showToast(`You Spared ${gameState.battle.enemy.name}!`);
+                        endBattle(true);
+                    } else {
+                        showToast("Enemy is not spareable yet! Increase Mercy via ACT.");
+                        startEnemyTurn();
+                    }
+                } else {
+                    // FLEE
+                    if (Math.random() < 0.7 && !gameState.battle.enemy.isBoss) {
+                        showToast("Escaped safely!");
+                        endBattle(false);
+                    } else {
+                        showToast("Couldn't escape!");
+                        startEnemyTurn();
+                    }
+                }
+            });
+        });
+
+        function openSubMenu(title, options, onSelect) {
+            gameState.battle.turn = 'SUBMENU';
+            const subMenu = document.getElementById('battleSubMenu');
+            const subTitle = document.getElementById('subMenuTitle');
+            const subOpts = document.getElementById('subMenuOptions');
+
+            subTitle.innerText = `SELECT ${title}`;
+            subOpts.innerHTML = '';
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'retro-btn bg-zinc-900 border border-zinc-700 hover:border-yellow-400 p-2 text-left rounded text-[10px] text-yellow-300';
+                btn.innerText = `* ${opt}`;
+                btn.onclick = () => {
+                    subMenu.classList.add('hidden');
+                    onSelect(opt);
+                };
+                subOpts.appendChild(btn);
+            });
+
+            document.getElementById('btnSubMenuBack').onclick = () => {
+                subMenu.classList.add('hidden');
+                gameState.battle.turn = 'PLAYER';
+            };
+
+            subMenu.classList.remove('hidden');
+        }
+
+        /* EXECUTE ACT CHOICES */
+        function executeActChoice(actName) {
+            audio.playSelect();
+            const boost = Math.floor(35 * gameState.diff.mercySpeed);
+            gameState.battle.mercyPct = Math.min(100, gameState.battle.mercyPct + boost);
+
+            document.getElementById('mercyPercentText').innerText = `${gameState.battle.mercyPct}%`;
+            if (gameState.battle.mercyPct >= 100) {
+                document.getElementById('enemyNameDisplay').className = "text-yellow-300 font-bold animate-pulse";
+            }
+
+            showToast(`Used ACT: ${actName}! Mercy +${boost}%`);
+            startEnemyTurn();
+        }
+
+        /* EXECUTE ITEM CHOICES */
+        function executeItemChoice(itemName) {
+            let itemKey = null;
+            for (let k in ITEMS) {
+                if (ITEMS[k].name === itemName) itemKey = k;
+            }
+
+            if (!itemKey || !gameState.player.inventory.includes(itemKey)) {
+                showToast("Cannot use this item!");
+                gameState.battle.turn = 'PLAYER';
+                return;
+            }
+
+            // Remove 1 item
+            const idx = gameState.player.inventory.indexOf(itemKey);
+            gameState.player.inventory.splice(idx, 1);
+
+            const healAmt = Math.floor(ITEMS[itemKey].heal * gameState.diff.healMult);
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healAmt);
+            updateHeaderUI();
+            audio.playHeal();
+
+            showToast(`Used ${itemName}! Healed ${healAmt} HP.`);
+            startEnemyTurn();
+        }
+
+        /* ATTACK MECHANIC */
+        function executePlayerAttack() {
+            document.getElementById('fightTimingOverlay').classList.add('hidden');
+
+            const pos = gameState.battle.timingPos; // 0 to 100
+            const diffFromCenter = Math.abs(pos - 50);
+
+            let dmg = 0;
+            if (diffFromCenter < 5) {
+                dmg = Math.floor(18 * gameState.diff.atkMult);
+                showToast("CRITICAL HIT! 🔥");
+            } else if (diffFromCenter < 20) {
+                dmg = Math.floor(12 * gameState.diff.atkMult);
+                showToast("GREAT HIT!");
+            } else if (diffFromCenter < 40) {
+                dmg = Math.floor(6 * gameState.diff.atkMult);
+                showToast("OK HIT");
+            } else {
+                showToast("MISSED!");
+            }
+
+            if (dmg > 0) {
+                audio.playHit();
+                gameState.battle.enemy.hp -= dmg;
+            }
+
+            if (gameState.battle.enemy.hp <= 0) {
+                gameState.player.killsCount++;
+                gameState.player.gold += 20;
+
+                if (gameState.battle.enemy.isBoss) {
+                    gameState.player.bossesResolved++;
+                    updateQuestProgress('q1', `${gameState.player.bossesResolved}/3 Bosses`);
+                    if (gameState.player.bossesResolved >= 3) {
+                        completeQuest('q1');
+                        triggerVictoryScreen();
+                        return;
+                    }
+                }
+
+                showToast(`Defeated ${gameState.battle.enemy.name}! Gained 20 Gold.`);
+                endBattle(true);
+            } else {
+                startEnemyTurn();
+            }
+        }
+
+        /* ENEMY TURN: BULLET HELL PHASE */
+        function startEnemyTurn() {
+            gameState.battle.turn = 'ENEMY_TURN';
+            gameState.battle.turnTimer = 5.0; // 5 seconds bullet dodge duration
+            gameState.battle.bullets = [];
+            gameState.battle.soulX = 320;
+            gameState.battle.soulY = 340;
+
+            updateBattleButtonsState();
+        }
+
+        function updateBattle(dt) {
+            const b = gameState.battle;
+
+            if (b.turn === 'FIGHT_TIMING') {
+                b.timingPos += b.timingSpeed * b.timingDir;
+                if (b.timingPos >= 100 || b.timingPos <= 0) {
+                    b.timingDir *= -1;
+                }
+                document.getElementById('timingCursor').style.left = `${b.timingPos}%`;
+            }
+
+            if (b.turn === 'ENEMY_TURN') {
+                b.turnTimer -= dt;
+
+                // Move Heart Soul inside Box Bounds
+                let dx = 0, dy = 0;
+                if (keys['ArrowUp'] || keys['KeyW'] || keys['w']) dy -= 1;
+                if (keys['ArrowDown'] || keys['KeyS'] || keys['s']) dy += 1;
+                if (keys['ArrowLeft'] || keys['KeyA'] || keys['a']) dx -= 1;
+                if (keys['ArrowRight'] || keys['KeyD'] || keys['d']) dx += 1;
+
+                b.soulX += dx * b.soulSpeed;
+                b.soulY += dy * b.soulSpeed;
+
+                // Clamp soul inside Box
+                const bounds = b.boxBounds;
+                b.soulX = Math.max(bounds.x + 10, Math.min(bounds.x + bounds.w - 10, b.soulX));
+                b.soulY = Math.max(bounds.y + 10, Math.min(bounds.y + bounds.h - 10, b.soulY));
+
+                // Spawn bullets based on pattern
+                spawnBulletPatterns(b.enemy.bulletPattern, dt);
+
+                // Update existing bullets
+                for (let i = b.bullets.length - 1; i >= 0; i--) {
+                    const bullet = b.bullets[i];
+                    bullet.x += bullet.vx;
+                    bullet.y += bullet.vy;
+
+                    // Hit test with heart
+                    const dist = Math.hypot(b.soulX - bullet.x, b.soulY - bullet.y);
+                    if (dist < (bullet.r + 6) && b.soulIframe <= 0) {
+                        // Take damage!
+                        const rawDmg = Math.max(1, Math.floor(b.enemy.atk * gameState.diff.defMult));
+                        gameState.player.hp -= rawDmg;
+                        b.soulIframe = 1.0; // 1s iframe grace period
+                        audio.playHit();
+                        updateHeaderUI();
+
+                        if (gameState.player.hp <= 0) {
+                            triggerGameOver();
+                            return;
+                        }
+                    }
+
+                    // Remove out of bounds bullets
+                    if (bullet.x < bounds.x - 20 || bullet.x > bounds.x + bounds.w + 20 ||
+                        bullet.y < bounds.y - 20 || bullet.y > bounds.y + bounds.h + 20) {
+                        b.bullets.splice(i, 1);
+                    }
+                }
+
+                if (b.soulIframe > 0) {
+                    b.soulIframe -= dt;
+                }
+
+                if (b.turnTimer <= 0) {
+                    b.bullets = [];
+                    b.turn = 'PLAYER';
+                    updateBattleButtonsState();
+                }
+            }
+        }
+
+        function spawnBulletPatterns(pattern, dt) {
+            const b = gameState.battle;
+            const bounds = b.boxBounds;
+
+            if (Math.random() < 0.08) {
+                if (pattern === 'fireballs' || pattern === 'fireball_rain') {
+                    b.bullets.push({
+                        x: bounds.x + Math.random() * bounds.w,
+                        y: bounds.y,
+                        vx: (Math.random() - 0.5) * 1.5,
+                        vy: 2 + Math.random() * 2,
+                        r: 6,
+                        color: '#f97316'
+                    });
+                } else if (pattern === 'bones') {
+                    b.bullets.push({
+                        x: bounds.x + bounds.w,
+                        y: bounds.y + bounds.h - 30,
+                        vx: -3.0,
+                        vy: 0,
+                        r: 8,
+                        color: '#ffffff'
+                    });
+                } else if (pattern === 'lasers_and_spears') {
+                    b.bullets.push({
+                        x: bounds.x + Math.random() * bounds.w,
+                        y: bounds.y + Math.random() * bounds.h,
+                        vx: (b.soulX - (bounds.x + bounds.w/2)) * 0.015,
+                        vy: (b.soulY - (bounds.y + bounds.h/2)) * 0.015,
+                        r: 5,
+                        color: '#06b6d4'
+                    });
+                }
+            }
+        }
+
+        function endBattle(won = true) {
+            document.getElementById('battleUIOverlay').classList.add('hidden');
+            document.getElementById('fightTimingOverlay').classList.add('hidden');
+            document.getElementById('battleSubMenu').classList.add('hidden');
+            gameState.mode = 'OVERWORLD';
+        }
+
+        /* ==========================================================================
+           10. QUEST LOG ENGINE
+           ========================================================================== */
+        function toggleQuestLog() {
+            const modal = document.getElementById('modalQuestLog');
+            if (modal.classList.contains('hidden')) {
+                renderQuestList();
+                modal.classList.remove('hidden');
+                if (gameState.mode === 'OVERWORLD') gameState.mode = 'QUEST_LOG';
+            } else {
+                modal.classList.add('hidden');
+                if (gameState.mode === 'QUEST_LOG') gameState.mode = 'OVERWORLD';
+            }
+        }
+
+        document.getElementById('btnQuestLog').addEventListener('click', toggleQuestLog);
+        document.getElementById('btnCloseQuestLog').addEventListener('click', toggleQuestLog);
+
+        function renderQuestList() {
+            const container = document.getElementById('questListContainer');
+            container.innerHTML = '';
+
+            gameState.quests.forEach(q => {
+                const item = document.createElement('div');
+                item.className = `p-3 rounded border ${q.completed ? 'border-emerald-500 bg-emerald-950/40' : 'border-zinc-700 bg-zinc-900'}`;
+                item.innerHTML = `
+                    <div class="flex justify-between items-center font-bold">
+                        <span class="${q.completed ? 'text-emerald-400' : 'text-yellow-400'}">${q.title}</span>
+                        <span class="text-[9px] ${q.completed ? 'text-emerald-300' : 'text-gray-400'}">${q.completed ? '✓ COMPLETED' : 'IN PROGRESS'}</span>
+                    </div>
+                    <p class="text-[10px] text-gray-300 mt-1">${q.desc}</p>
+                    <div class="text-[9px] text-cyan-300 mt-1">Status: ${q.progress}</div>
+                `;
+                container.appendChild(item);
+            });
+
+            const totalSpares = gameState.player.sparesCount;
+            const totalKills = gameState.player.killsCount;
+            const karma = totalKills === 0 ? '100% (TRUE PACIFIST)' : `${Math.max(0, 100 - totalKills * 25)}% (NEUTRAL/GENOCIDE)`;
+            document.getElementById('karmaScoreText').innerText = karma;
+        }
+
+        function updateQuestProgress(questId, progressText) {
+            const q = gameState.quests.find(x => x.id === questId);
+            if (q) {
+                q.progress = progressText;
+                showToast(`Quest Updated: ${q.title}`);
+            }
+        }
+
+        function completeQuest(questId) {
+            const q = gameState.quests.find(x => x.id === questId);
+            if (q && !q.completed) {
+                q.completed = true;
+                q.progress = 'COMPLETED';
+                showToast(`🎉 QUEST COMPLETED: ${q.title}!`);
+            }
+        }
+
+        /* ==========================================================================
+           11. CANVAS RENDERING ENGINE
+           ========================================================================== */
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState.mode === 'OVERWORLD' || gameState.mode === 'DIALOGUE' || gameState.mode === 'QUEST_LOG') {
+                renderOverworld();
+            } else if (gameState.mode === 'BATTLE') {
+                renderBattle();
+            }
+        }
+
+        function renderOverworld() {
+            const zone = ZONES[gameState.player.zone];
+
+            // Map Background
+            ctx.fillStyle = zone.bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Walls
+            ctx.fillStyle = zone.borderColor;
+            zone.walls.forEach(w => {
+                ctx.fillRect(w.x, w.y, w.w, w.h);
+            });
+
+            // Save Stars
+            zone.saveStars.forEach(s => {
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(s.x + 10, s.y + 10, 8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Chests
+            zone.chests.forEach(c => {
+                ctx.fillStyle = c.opened ? '#52525b' : '#d97706';
+                ctx.fillRect(c.x, c.y, c.w, c.h);
+                ctx.strokeStyle = '#ffffff';
+                ctx.strokeRect(c.x, c.y, c.w, c.h);
+            });
+
+            // NPCs
+            zone.npcs.forEach(npc => {
+                ctx.font = '20px serif';
+                ctx.fillText(npc.icon, npc.x, npc.y + 20);
+            });
+
+            // Player Soul Avatar
+            const p = gameState.player;
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '16px serif';
+            ctx.fillText('♥', p.x, p.y + 16);
+        }
+
+        function renderBattle() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const b = gameState.battle;
+
+            // Render Enemy Sprite
+            if (b.enemy) {
+                ctx.font = '48px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(b.enemy.sprite, canvas.width / 2, 160);
+                ctx.textAlign = 'left';
+            }
+
+            // Render Bullet Hell Box
+            const box = b.boxBounds;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+            if (b.turn === 'ENEMY_TURN') {
+                // Render Soul
+                if (b.soulIframe <= 0 || Math.floor(Date.now() / 80) % 2 === 0) {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = '16px serif';
+                    ctx.fillText('♥', b.soulX - 6, b.soulY + 6);
+                }
+
+                // Render Bullets
+                b.bullets.forEach(bullet => {
+                    ctx.fillStyle = bullet.color || '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+
+        /* ==========================================================================
+           12. GAME OVER, VICTORY & PERSISTENCE
+           ========================================================================== */
+        function triggerGameOver() {
+            gameState.mode = 'GAME_OVER';
+            audio.playHit();
+
+            const modal = document.getElementById('modalGameOver');
+            modal.classList.remove('hidden');
+
+            if (gameState.diff.permadeath) {
+                document.getElementById('hardcoreWipeText').classList.remove('hidden');
+                localStorage.removeItem('undertale_retro_save_v1');
+            }
+        }
+
+        document.getElementById('btnRestartGame').addEventListener('click', () => {
+            document.getElementById('modalGameOver').classList.add('hidden');
+            resetGame();
+        });
+
+        function triggerVictoryScreen() {
+            gameState.mode = 'VICTORY';
+            gameState.victories++;
+            localStorage.setItem('undertale_victories', gameState.victories);
+
+            audio.playFanfare();
+
+            document.getElementById('vicDiffText').innerText = gameState.diff.name;
+            document.getElementById('vicLvText').innerText = `LV ${gameState.player.lv}`;
+            document.getElementById('vicEndingText').innerText = gameState.player.killsCount === 0 ? 'TRUE PACIFIST' : 'NEUTRAL';
+            document.getElementById('vicGoldText').innerText = gameState.player.gold;
+
+            document.getElementById('modalVictory').classList.remove('hidden');
+        }
+
+        document.getElementById('btnVictoryRestart').addEventListener('click', () => {
+            document.getElementById('modalVictory').classList.add('hidden');
+            resetGame();
+        });
+
+        /* STORAGE SAVING & LOADING */
+        function saveGameToStorage() {
+            const data = {
+                player: gameState.player,
+                quests: gameState.quests,
+                diffName: gameState.diff.name
+            };
+            localStorage.setItem('undertale_retro_save_v1', JSON.stringify(data));
+        }
+
+        function loadSavedHighScores() {
+            const v = localStorage.getItem('undertale_victories');
+            if (v) {
+                gameState.victories = parseInt(v, 10);
+                document.getElementById('highScoreText').innerText = gameState.victories;
+            }
+        }
+
+        function resetGame() {
+            gameState.player.hp = gameState.diff.maxHp;
+            gameState.player.maxHp = gameState.diff.maxHp;
+            gameState.player.x = 120;
+            gameState.player.y = 200;
+            gameState.player.zone = 'Ruins';
+            gameState.player.sparesCount = 0;
+            gameState.player.killsCount = 0;
+            gameState.player.bossesResolved = 0;
+            gameState.player.inventory = ['candy', 'pie'];
+
+            // Reset quests
+            gameState.quests.forEach(q => {
+                q.completed = false;
+                q.progress = 'In Progress';
+            });
+
+            document.getElementById('modalTitle').classList.remove('hidden');
+            gameState.mode = 'TITLE';
+            updateHeaderUI();
+        }
+
+        /* UI UPDATE HELPERS */
+        function updateHeaderUI() {
+            const p = gameState.player;
+            document.getElementById('playerNameDisplay').innerText = 'FRISK';
+            document.getElementById('hpTextDisplay').innerText = `${p.hp}/${p.maxHp}`;
+            document.getElementById('hpBarFill').style.width = `${Math.max(0, (p.hp / p.maxHp) * 100)}%`;
+            document.getElementById('goldDisplay').innerText = p.gold;
+            document.getElementById('zoneDisplay').innerText = p.zone;
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-16 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-2 rounded text-xs font-bold border-2 border-white shadow-lg z-50 transition-all duration-300';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        /* ==========================================================================
+           13. INITIALIZATION & SETUP
+           ========================================================================== */
+        window.addEventListener('load', () => {
+            initCanvas();
+            setupTouchControls();
+            loadSavedHighScores();
+
+            // Setup Difficulty Buttons
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const diffKey = btn.getAttribute('data-diff');
+                    gameState.diff = DIFFICULTIES[diffKey];
+
+                    // Set Player Stats from Diff
+                    gameState.player.maxHp = gameState.diff.maxHp;
+                    gameState.player.hp = gameState.diff.maxHp;
+
+                    document.getElementById('diffBadge').innerText = gameState.diff.name;
+                    document.getElementById('modalTitle').classList.add('hidden');
+
+                    updateHeaderUI();
+                    gameState.mode = 'OVERWORLD';
+                    audio.playSelect();
+                    showToast(`Started in ${gameState.diff.name} mode!`);
+                });
+            });
+
+            // SFX Toggle
+            document.getElementById('btnSoundToggle').addEventListener('click', () => {
+                audio.enabled = !audio.enabled;
+                document.getElementById('btnSoundToggle').innerText = `SFX: ${audio.enabled ? 'ON' : 'OFF'}`;
+            });
+
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
 </body>
 </html>

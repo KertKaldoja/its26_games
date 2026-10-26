@@ -2,74 +2,74 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Shadow Castle: Flag Heist</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="w-screen h-screen flex flex-col justify-center items-center bg-slate-950 relative overflow-hidden">
+<body class="w-screen h-screen flex flex-col justify-center items-center bg-slate-950 relative overflow-hidden select-none">
 
     <!-- Top Navigation / Vitals HUD -->
-    <div id="hud-top" class="absolute top-3 left-3 right-3 z-10 flex flex-wrap justify-between items-center pointer-events-none gap-2">
+    <div id="hud-top" class="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 z-10 flex flex-wrap justify-between items-center pointer-events-none gap-1.5 sm:gap-2">
         
         <!-- Player Vitals -->
-        <div class="flex items-center gap-2 sm:gap-4 bg-slate-900/90 border border-amber-900/40 p-2 sm:p-3 rounded-xl backdrop-blur-md shadow-2xl pointer-events-auto">
+        <div class="flex items-center gap-2 sm:gap-4 bg-slate-900/90 border border-amber-900/40 p-1.5 sm:p-3 rounded-xl backdrop-blur-md shadow-2xl pointer-events-auto">
             <!-- Health Bar -->
-            <div class="flex flex-col gap-1 w-24 sm:w-44">
-                <div class="flex justify-between text-[10px] sm:text-[11px] font-bold text-slate-300">
-                    <span class="flex items-center gap-1">❤️ HEALTH</span>
+            <div class="flex flex-col gap-0.5 sm:gap-1 w-20 sm:w-44">
+                <div class="flex justify-between text-[9px] sm:text-[11px] font-bold text-slate-300">
+                    <span class="flex items-center gap-1">❤️ <span class="hidden sm:inline">HEALTH</span></span>
                     <span id="hp-text">100 / 100</span>
                 </div>
-                <div class="w-full bg-slate-950 h-2.5 sm:h-3 rounded-full border border-slate-800 overflow-hidden p-0.5">
+                <div class="w-full bg-slate-950 h-2 sm:h-3 rounded-full border border-slate-800 overflow-hidden p-0.5">
                     <div id="hp-bar" class="bg-gradient-to-r from-red-600 via-emerald-500 to-emerald-400 h-full rounded-full transition-all duration-150" style="width: 100%;"></div>
                 </div>
             </div>
 
             <!-- Stamina Bar -->
-            <div class="flex flex-col gap-1 w-20 sm:w-36">
-                <div class="flex justify-between text-[10px] sm:text-[11px] font-bold text-slate-300">
-                    <span class="flex items-center gap-1">⚡ STAMINA</span>
+            <div class="flex flex-col gap-0.5 sm:gap-1 w-16 sm:w-36">
+                <div class="flex justify-between text-[9px] sm:text-[11px] font-bold text-slate-300">
+                    <span class="flex items-center gap-1">⚡ <span class="hidden sm:inline">STAMINA</span></span>
                     <span id="stamina-text">100%</span>
                 </div>
-                <div class="w-full bg-slate-950 h-2.5 sm:h-3 rounded-full border border-slate-800 overflow-hidden p-0.5">
+                <div class="w-full bg-slate-950 h-2 sm:h-3 rounded-full border border-slate-800 overflow-hidden p-0.5">
                     <div id="stamina-bar" class="bg-gradient-to-r from-amber-600 to-yellow-400 h-full rounded-full transition-all duration-150" style="width: 100%;"></div>
                 </div>
             </div>
         </div>
 
         <!-- Center Status Badges -->
-        <div class="flex items-center gap-1.5 sm:gap-3 bg-slate-900/90 border border-amber-900/40 px-2 sm:px-3 py-2 rounded-xl backdrop-blur-md shadow-2xl pointer-events-auto">
-            <div id="stealth-badge" class="px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-emerald-950/80 border border-emerald-500/50 text-emerald-400">
+        <div class="flex items-center gap-1 sm:gap-3 bg-slate-900/90 border border-amber-900/40 px-2 py-1.5 sm:py-2 rounded-xl backdrop-blur-md shadow-2xl pointer-events-auto">
+            <div id="stealth-badge" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[11px] font-black tracking-wider uppercase bg-emerald-950/80 border border-emerald-500/50 text-emerald-400">
                 HIDDEN
             </div>
-            <div id="flag-badge" class="px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-400 flex items-center gap-1">
-                <span>🚩 FLAG:</span> <span id="flag-status-text" class="text-amber-400">NOT TAKEN</span>
+            <div id="flag-badge" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-400 flex items-center gap-1">
+                <span>🚩</span> <span id="flag-status-text" class="text-amber-400">NOT TAKEN</span>
             </div>
             <div id="weapon-badge" class="hidden md:flex px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-400 items-center gap-1">
                 <span>⚔️</span> <span id="weapon-status-text" class="text-slate-400">UNARMED</span>
             </div>
-            <div id="rock-badge" class="px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-400 flex items-center gap-1">
-                <span>🪨 ROCK:</span> <span id="rock-status-text" class="text-emerald-400">READY</span>
+            <div id="rock-badge" class="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-400 flex items-center gap-1">
+                <span>🪨</span> <span id="rock-status-text" class="text-emerald-400">READY</span>
             </div>
         </div>
 
         <!-- Right Timer & Options -->
-        <div class="flex items-center gap-2 sm:gap-3 bg-slate-900/90 border border-amber-900/40 p-2 sm:p-3 rounded-xl backdrop-blur-md shadow-2xl pointer-events-auto">
+        <div class="flex items-center gap-2 sm:gap-3 bg-slate-900/90 border border-amber-900/40 p-1.5 sm:p-3 rounded-xl backdrop-blur-md shadow-2xl pointer-events-auto">
             <div class="text-right">
                 <div class="text-[8px] sm:text-[9px] tracking-widest text-slate-400 font-bold uppercase">TIME</div>
-                <div id="game-timer" class="text-sm sm:text-lg font-black font-mono text-amber-400">00:00.0</div>
+                <div id="game-timer" class="text-xs sm:text-lg font-black font-mono text-amber-400">00:00.0</div>
             </div>
-            <button id="btn-pause" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition text-xs font-bold active:scale-95">
-                ⏸ PAUSE
+            <button id="btn-pause" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition text-[10px] sm:text-xs font-bold active:scale-95 cursor-pointer">
+                ⏸ <span class="hidden sm:inline">PAUSE</span>
             </button>
         </div>
     </div>
 
     <!-- Alert Banner Overlay -->
-    <div id="banner-alert" class="absolute top-16 sm:top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-4">
-        <div id="banner-bg" class="bg-red-950/90 border-2 border-red-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-2xl backdrop-blur-md text-center text-xs sm:text-sm tracking-wide">
+    <div id="banner-alert" class="absolute top-14 sm:top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-4 max-w-[90vw]">
+        <div id="banner-bg" class="bg-red-950/90 border-2 border-red-500 text-white font-bold px-4 sm:px-6 py-2 rounded-xl shadow-2xl backdrop-blur-md text-center text-[10px] sm:text-sm tracking-wide">
             ALARM TRIGGERED! GUARDS ARE ON HIGH ALERT!
         </div>
     </div>
@@ -90,42 +90,38 @@
     </div>
 
     <!-- Mobile Touch Controls Overlay -->
-    <div id="mobile-controls" class="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-4 hidden md:hidden">
-        <div class="flex justify-between items-end w-full mt-auto">
-            <div id="touch-dpad" class="grid grid-cols-3 gap-1.5 w-36 h-36 pointer-events-auto">
-                <div></div>
-                <button id="btn-touch-up" class="touch-btn rounded-t-xl flex items-center justify-center text-lg font-bold">⬆️</button>
-                <div></div>
-                <button id="btn-touch-left" class="touch-btn rounded-l-xl flex items-center justify-center text-lg font-bold">⬅️</button>
-                <div class="touch-btn rounded-none flex items-center justify-center text-xs text-slate-500">MOVE</div>
-                <button id="btn-touch-right" class="touch-btn rounded-r-xl flex items-center justify-center text-lg font-bold">➡️</button>
-                <div></div>
-                <button id="btn-touch-down" class="touch-btn rounded-b-xl flex items-center justify-center text-lg font-bold">⬇️</button>
-                <div></div>
-            </div>
+    <div id="mobile-controls" class="absolute inset-0 pointer-events-none z-20 flex justify-between items-end p-4 hidden">
+        <!-- Large Translucent Left D-Pad -->
+        <div id="touch-dpad" class="grid grid-cols-3 gap-1.5 w-48 h-48 sm:w-56 sm:h-56 pointer-events-auto opacity-55 hover:opacity-90 transition-opacity">
+            <div></div>
+            <button id="btn-touch-up" class="touch-btn rounded-t-2xl flex items-center justify-center text-3xl font-bold">⬆️</button>
+            <div></div>
+            <button id="btn-touch-left" class="touch-btn rounded-l-2xl flex items-center justify-center text-3xl font-bold">⬅️</button>
+            <div class="touch-btn rounded-none flex items-center justify-center text-[10px] text-slate-400 font-extrabold tracking-widest">MOVE</div>
+            <button id="btn-touch-right" class="touch-btn rounded-r-2xl flex items-center justify-center text-3xl font-bold">➡️</button>
+            <div></div>
+            <button id="btn-touch-down" class="touch-btn rounded-b-2xl flex items-center justify-center text-3xl font-bold">⬇️</button>
+            <div></div>
+        </div>
 
-            <div class="flex flex-col gap-2.5 pointer-events-auto">
-                <div class="flex gap-2">
-                    <button id="btn-touch-rock" class="touch-btn w-14 h-14 rounded-full flex flex-col items-center justify-center text-xs font-bold text-amber-300 active:scale-90">
-                        <span>🪨</span>
-                        <span class="text-[9px]">LURE</span>
-                    </button>
-                    <button id="btn-touch-crouch" class="touch-btn w-14 h-14 rounded-full flex flex-col items-center justify-center text-xs font-bold text-emerald-300 active:scale-90">
-                        <span>🥷</span>
-                        <span class="text-[9px]">SNEAK</span>
-                    </button>
-                </div>
-                <div class="flex gap-2 justify-end">
-                    <button id="btn-touch-sprint" class="touch-btn w-14 h-14 rounded-full flex flex-col items-center justify-center text-xs font-bold text-yellow-300 active:scale-90">
-                        <span>⚡</span>
-                        <span class="text-[9px]">SPRINT</span>
-                    </button>
-                    <button id="btn-touch-strike" class="touch-btn w-16 h-16 bg-red-950/80 border border-red-500/60 rounded-full flex flex-col items-center justify-center text-xs font-black text-red-300 active:scale-90">
-                        <span>⚔️</span>
-                        <span class="text-[9px]">STRIKE</span>
-                    </button>
-                </div>
-            </div>
+        <!-- Rearranged Big Action Buttons Cluster -->
+        <div class="grid grid-cols-2 gap-3.5 pointer-events-auto w-44 h-44 sm:w-52 sm:h-52">
+            <button id="btn-touch-rock" class="touch-btn rounded-2xl flex flex-col items-center justify-center text-base sm:text-lg font-bold text-amber-300 active:scale-95 opacity-65">
+                <span class="text-xl sm:text-2xl">🪨</span>
+                <span class="text-[10px] sm:text-xs">LURE</span>
+            </button>
+            <button id="btn-touch-crouch" class="touch-btn rounded-2xl flex flex-col items-center justify-center text-base sm:text-lg font-bold text-emerald-300 active:scale-95 opacity-65">
+                <span class="text-xl sm:text-2xl">🥷</span>
+                <span class="text-[10px] sm:text-xs">SNEAK</span>
+            </button>
+            <button id="btn-touch-sprint" class="touch-btn rounded-2xl flex flex-col items-center justify-center text-base sm:text-lg font-bold text-yellow-300 active:scale-95 opacity-65">
+                <span class="text-xl sm:text-2xl">⚡</span>
+                <span class="text-[10px] sm:text-xs">SPRINT</span>
+            </button>
+            <button id="btn-touch-strike" class="touch-btn bg-red-950/80 border border-red-500/60 rounded-2xl flex flex-col items-center justify-center text-base sm:text-lg font-black text-red-300 active:scale-95 opacity-80">
+                <span class="text-2xl sm:text-3xl">⚔️</span>
+                <span class="text-[10px] sm:text-xs">STRIKE</span>
+            </button>
         </div>
     </div>
 
@@ -138,67 +134,82 @@
     </div>
 
     <!-- Start Screen Modal -->
-    <div id="modal-start" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col justify-center items-center p-4">
-        <div class="max-w-2xl w-full bg-slate-900/90 border border-amber-700/50 rounded-2xl p-5 sm:p-8 shadow-2xl flex flex-col gap-4 sm:gap-5 text-center relative overflow-hidden">
+    <div id="modal-start" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col justify-center items-center p-3 sm:p-4 overflow-y-auto">
+        <div class="max-w-xl w-full bg-slate-900/90 border border-amber-700/50 rounded-2xl p-4 sm:p-7 shadow-2xl flex flex-col gap-3 sm:gap-4 text-center relative my-auto">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-600"></div>
             
-            <div>
-                <h1 class="cinzel-font text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 tracking-widest drop-shadow-md">
-                    SHADOW CASTLE
-                </h1>
-                <p class="text-amber-500/90 font-semibold tracking-widest text-xs sm:text-sm mt-1 uppercase">Flag Heist: Clean Maze Edition</p>
+            <div class="flex justify-between items-center">
+                <div class="text-left">
+                    <h1 class="cinzel-font text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 tracking-widest drop-shadow-md">
+                        SHADOW CASTLE
+                    </h1>
+                    <p class="text-amber-500/90 font-semibold tracking-widest text-[10px] sm:text-xs uppercase">Flag Heist: Clean Maze Edition</p>
+                </div>
+                <div id="device-mode-badge" class="px-2 py-1 rounded-md text-[10px] font-bold uppercase bg-slate-800 border border-slate-700 text-slate-300 flex items-center gap-1">
+                    <span id="device-icon">💻</span> <span id="device-text">Desktop</span>
+                </div>
             </div>
 
-            <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 sm:p-4 text-left text-xs sm:text-sm text-slate-300 space-y-2 sm:space-y-2.5 leading-relaxed max-h-[30vh] overflow-y-auto">
-                <p>🌲 <strong class="text-amber-400">1. Infiltrate:</strong> Cross the outdoor forest gate into the clean, structured castle maze.</p>
-                <p>🚩 <strong class="text-amber-400">2. The Royal Flag:</strong> Stealing the flag in the deep sanctum triggers castle-wide alarms!</p>
-                <p>🗡️ <strong class="text-amber-400">3. Secret Armory:</strong> Break the cracked wall in the side chamber to steal the ancient sword and strike guards!</p>
+            <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 text-left text-xs text-slate-300 space-y-1.5 leading-relaxed max-h-[22vh] sm:max-h-[30vh] overflow-y-auto">
+                <p>🌲 <strong class="text-amber-400">1. Infiltrate:</strong> Cross the outdoor forest gate into the clean castle maze.</p>
+                <p>🚩 <strong class="text-amber-400">2. The Royal Flag:</strong> Stealing the flag triggers castle-wide alarms!</p>
+                <p>🗡️ <strong class="text-amber-400">3. Secret Armory:</strong> Break the cracked wall to unlock the sword and strike guards.</p>
                 <p>🩹 <strong class="text-amber-400">4. Medkits (+50 HP):</strong> Found next to the sword and in the west chamber on the opposite side of the castle!</p>
                 <p>🪨 <strong class="text-amber-400">5. Lure Guards:</strong> Press <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-amber-300">E</kbd> (or tap Lure button) to throw a rock.</p>
                 <p>🥷 <strong class="text-amber-400">6. Stealth Controls:</strong> Hold <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-amber-300">C</kbd> to Crouch. Hold <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-amber-300">Shift</kbd> / <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-amber-300">Space</kbd> to Sprint.</p>
-                <p>⛵ <strong class="text-amber-400">7. Escape:</strong> Return to the getaway wagon in the outdoor yard to complete the heist!</p>
+                <p>⛵ <strong class="text-amber-400">7. Escape:</strong> Return to the getaway wagon in the outdoor yard!</p>
             </div>
 
             <!-- Global Leaderboard Section -->
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">🏆 Global Leaderboard (Fastest Times)</h3>
-                <div id="leaderboard-list" class="text-xs text-slate-400 max-h-24 overflow-y-auto space-y-1">
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <h3 class="text-[10px] sm:text-xs font-bold text-amber-400 uppercase tracking-widest mb-1">🏆 Global Leaderboard (Fastest Times)</h3>
+                <div id="leaderboard-list" class="text-xs text-slate-400 max-h-20 overflow-y-auto space-y-1">
                     <p class="text-slate-500 italic">Loading scores...</p>
                 </div>
             </div>
 
-            <div id="start-best-score" class="text-xs text-amber-300/80 bg-amber-950/30 border border-amber-800/40 p-2.5 rounded-lg flex justify-around">
-                <span>🏆 Personal Best: <strong id="best-time-val" class="text-amber-400">None</strong></span>
+            <div id="start-best-score" class="text-[11px] sm:text-xs text-amber-300/80 bg-amber-950/30 border border-amber-800/40 p-2 rounded-lg flex justify-around">
+                <span>🏆 Best: <strong id="best-time-val" class="text-amber-400">None</strong></span>
                 <span>⚔️ Kills: <strong id="best-kills-val" class="text-amber-400">0</strong></span>
                 <span>🪨 Rocks: <strong id="start-rocks-val" class="text-emerald-400">10</strong></span>
             </div>
 
-            <button id="btn-start-game" class="w-full py-3.5 sm:py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-slate-950 font-black text-base sm:text-lg rounded-xl shadow-xl transition duration-200 transform hover:scale-[1.01] active:scale-98 cursor-pointer tracking-wider cinzel-font">
-                BEGIN INFILTRATION
-            </button>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <button id="btn-fullscreen" class="hidden py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1">
+                    <span>📱</span> Fullscreen Mode
+                </button>
+                <button id="btn-start-game" class="flex-1 py-3.5 bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-slate-950 font-black text-base rounded-xl shadow-xl transition duration-200 transform hover:scale-[1.01] active:scale-98 cursor-pointer tracking-wider cinzel-font">
+                    BEGIN INFILTRATION
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Pause Screen Modal -->
     <div id="modal-pause" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 hidden flex flex-col justify-center items-center p-4">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-center">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-center my-auto">
             <h2 class="cinzel-font text-3xl font-bold text-amber-400">INFILTRATION PAUSED</h2>
             <div class="flex flex-col gap-3">
-                <button id="btn-resume" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl transition">
+                <button id="btn-resume" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl transition cursor-pointer">
                     RESUME GAME
                 </button>
-                <button id="btn-restart-pause" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold rounded-xl transition">
-                    RESTART MISSION
-                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-restart-pause" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold rounded-xl transition cursor-pointer text-xs">
+                        RESTART MISSION
+                    </button>
+                    <button id="btn-menu-pause" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold rounded-xl transition cursor-pointer text-xs">
+                        MAIN MENU
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Game Over Modal -->
-    <div id="modal-gameover" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 hidden flex flex-col justify-center items-center p-4">
-        <div class="max-w-md w-full bg-slate-900 border border-red-900/80 rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-center">
+    <div id="modal-gameover" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 hidden flex flex-col justify-center items-center p-4 overflow-y-auto">
+        <div class="max-w-md w-full bg-slate-900 border border-red-900/80 rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-center my-auto">
             <div>
-                <h2 class="cinzel-font text-4xl font-black text-red-500 tracking-wide">CAUGHT IN THE SHADOWS</h2>
+                <h2 class="cinzel-font text-3xl sm:text-4xl font-black text-red-500 tracking-wide">CAUGHT IN THE SHADOWS</h2>
                 <p class="text-slate-400 text-xs sm:text-sm mt-1">The royal guards cut down your escape attempt.</p>
             </div>
             
@@ -208,21 +219,26 @@
                 <div class="flex justify-between"><span>Time Survived:</span> <span id="go-time" class="font-bold text-slate-200">00:00</span></div>
             </div>
 
-            <button id="btn-restart-dead" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-lg rounded-xl shadow-lg transition transform hover:scale-[1.02] active:scale-98">
-                RETRY HEIST
-            </button>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btn-restart-dead" class="w-full py-3 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-sm rounded-xl shadow-lg transition transform hover:scale-[1.02] active:scale-98 cursor-pointer">
+                    RETRY HEIST
+                </button>
+                <button id="btn-menu-dead" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-sm rounded-xl transition cursor-pointer">
+                    MAIN MENU
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Victory Modal -->
-    <div id="modal-victory" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 hidden flex flex-col justify-center items-center p-4">
-        <div class="max-w-md w-full bg-slate-900 border border-emerald-500/60 rounded-2xl p-6 shadow-2xl flex flex-col gap-5 text-center">
+    <div id="modal-victory" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 hidden flex flex-col justify-center items-center p-4 overflow-y-auto">
+        <div class="max-w-md w-full bg-slate-900 border border-emerald-500/60 rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-3 sm:gap-4 text-center my-auto max-h-[92vh] overflow-y-auto">
             <div>
-                <h2 class="cinzel-font text-4xl font-black text-emerald-400 tracking-wide">HEIST COMPLETE!</h2>
+                <h2 class="cinzel-font text-3xl sm:text-4xl font-black text-emerald-400 tracking-wide">HEIST COMPLETE!</h2>
                 <p class="text-emerald-200/80 text-xs sm:text-sm mt-1">You escaped into the night with the Royal Flag!</p>
             </div>
 
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left text-xs space-y-2 text-slate-300">
+            <div class="bg-slate-950 p-3.5 sm:p-4 rounded-xl border border-slate-800 text-left text-xs space-y-2 text-slate-300">
                 <div class="flex justify-between"><span>Escape Time:</span> <span id="vic-time" class="font-bold text-amber-400">00:00.0</span></div>
                 <div class="flex justify-between"><span>Guards Defeated:</span> <span id="vic-kills" class="font-bold text-slate-200">0</span></div>
                 <div class="flex justify-between"><span>Secret Sword Found:</span> <span id="vic-sword" class="font-bold text-sky-400">No</span></div>
@@ -232,24 +248,29 @@
                 </div>
             </div>
 
-            <!-- Google OAuth2 Leaderboard Submission Container -->
-            <div id="score-submit-container" class="flex flex-col gap-2 w-full">
-                <div id="auth-status-box" class="text-xs text-slate-300 bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
-                    <span id="user-display-name">Not signed in</span>
-                    <button id="btn-google-login" class="bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition shadow">
+            <!-- Global Leaderboard Submission Box -->
+            <div id="score-submit-container" class="flex flex-col gap-2 w-full bg-slate-950/80 border border-slate-800 p-3 rounded-xl">
+                <div id="auth-status-box" class="text-xs text-slate-300 flex justify-between items-center">
+                    <span id="user-display-name" class="font-semibold text-slate-300">Not signed in</span>
+                    <button id="btn-google-login" class="bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 transition shadow cursor-pointer">
                         <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
                         Sign in with Google
                     </button>
                 </div>
 
-                <button id="btn-submit-score" disabled class="bg-slate-700 text-slate-500 text-xs font-bold px-4 py-2.5 rounded-xl cursor-not-allowed transition">
+                <button id="btn-submit-score" disabled class="w-full bg-slate-700 text-slate-500 text-xs font-bold px-4 py-2.5 rounded-xl cursor-not-allowed transition">
                     Sign in to Submit Score
                 </button>
             </div>
 
-            <button id="btn-restart-victory" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-black text-lg rounded-xl shadow-lg transition transform hover:scale-[1.02] active:scale-98">
-                PLAY AGAIN
-            </button>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btn-restart-victory" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-black text-sm rounded-xl shadow-lg transition transform hover:scale-[1.02] active:scale-98 cursor-pointer">
+                    PLAY AGAIN
+                </button>
+                <button id="btn-menu-victory" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-sm rounded-xl transition cursor-pointer">
+                    MAIN MENU
+                </button>
+            </div>
         </div>
     </div>
 

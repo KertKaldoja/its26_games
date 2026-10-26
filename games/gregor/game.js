@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
+import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 // Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDCl5gu6Xavdsi8ImqZxQjdpy9EHZBUeiU",
@@ -14,65 +13,118 @@ const firebaseConfig = {
     measurementId: "G-2KNME0CSZZ"
 };
 
-// Initialize Firebase & Services
+// Initialize Firebase Services
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Restrict Google Sign-In prompt to voco.ee accounts
-googleProvider.setCustomParameters({
-    'hd': 'voco.ee'
-});
+// Restrict Google Sign-In prompt to voco.ee domain
+// googleProvider.setCustomParameters({
+//     'hd': 'voco.ee'
+// });
 
 let currentUser = null;
+let isMobileDevice = false;
 
-// Track Google Auth State Changes
-onAuthStateChanged(auth, async (user) => {
+// Auto-Detect Device Capabilities
+function detectDevice() {
+    const userAgentMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasTouchScreen = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const smallScreen = window.innerWidth <= 820;
+
+    isMobileDevice = userAgentMobile || (hasTouchScreen && smallScreen);
+
+    const deviceBadgeIcon = document.getElementById('device-icon');
+    const deviceBadgeText = document.getElementById('device-text');
+    const fullscreenBtn = document.getElementById('btn-fullscreen');
+    const mobileOverlay = document.getElementById('mobile-controls');
+
+    if (isMobileDevice) {
+        if (deviceBadgeIcon) deviceBadgeIcon.innerText = '📱';
+        if (deviceBadgeText) deviceBadgeText.innerText = 'Mobile Mode';
+        if (fullscreenBtn) fullscreenBtn.classList.remove('hidden');
+        if (mobileOverlay) mobileOverlay.classList.remove('hidden');
+    } else {
+        if (deviceBadgeIcon) deviceBadgeIcon.innerText = '💻';
+        if (deviceBadgeText) deviceBadgeText.innerText = 'Desktop Mode';
+        if (fullscreenBtn) fullscreenBtn.classList.add('hidden');
+        if (mobileOverlay) mobileOverlay.classList.add('hidden');
+    }
+}
+
+function requestFullscreenMode() {
+    const docEl = document.documentElement;
+    if (docEl.requestFullscreen) {
+        docEl.requestFullscreen();
+    } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+    } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+    }
+}
+
+document.getElementById('btn-fullscreen')?.addEventListener('click', requestFullscreenMode);
+
+// Sync UI components based on user login status
+function updateAuthUI(user) {
     const displayNameElem = document.getElementById('user-display-name');
     const loginBtn = document.getElementById('btn-google-login');
     const submitBtn = document.getElementById('btn-submit-score');
 
     if (user) {
-        // Enforce @voco.ee email domain restriction
-        if (!user.email || !user.email.endsWith('@voco.ee')) {
-            alert('Access restricted! Please sign in with your official @voco.ee account.');
-            await signOut(auth);
-            currentUser = null;
-            return;
-        }
-
-        currentUser = user;
         if (displayNameElem) displayNameElem.innerText = `👤 ${user.displayName || 'Player'}`;
         if (loginBtn) loginBtn.classList.add('hidden');
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerText = 'Submit Score to Global Leaderboard';
-            submitBtn.className = 'bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer';
+            submitBtn.className = 'w-full bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer';
         }
     } else {
-        currentUser = null;
         if (displayNameElem) displayNameElem.innerText = 'Not signed in';
         if (loginBtn) loginBtn.classList.remove('hidden');
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.innerText = 'Sign in to Submit Score';
-            submitBtn.className = 'bg-slate-700 text-slate-500 text-xs font-bold px-4 py-2.5 rounded-xl cursor-not-allowed transition';
+            submitBtn.className = 'w-full bg-slate-700 text-slate-500 text-xs font-bold px-4 py-2.5 rounded-xl cursor-not-allowed transition';
         }
-    }
-});
-
-// Google Popup Login Function
-async function handleGoogleLogin() {
-    try {
-        await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-        console.error("Google auth failed:", error);
     }
 }
 
-// --- Game Logic ---
+// Track Google Auth State Changes
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        if (!user.email || !user.email.endsWith('@voco.ee')) {
+            alert('Access restricted! Please sign in with your official @voco.ee account.');
+            await signOut(auth);
+            currentUser = null;
+            updateAuthUI(null);
+            return;
+        }
+        currentUser = user;
+        updateAuthUI(user);
+    } else {
+        currentUser = null;
+        updateAuthUI(null);
+    }
+});
+
+async function handleGoogleLogin() {
+    try {
+        // Always try popup mode first (keeps login scoped inside the browser window)
+        await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+        console.warn("Popup blocked or failed, fallback to redirect:", error);
+        
+        // Fallback to redirect only if popups are strictly blocked by browser settings
+        if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+            await signInWithRedirect(auth, googleProvider);
+        }
+    }
+}
+
+// --- Game Engine Logic ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -396,11 +448,34 @@ class Player {
         }
 
         this.moveWithCollision(dx * moveSpeed, dy * moveSpeed);
-        
-        if (!('ontouchstart' in window) || worldMouseX !== 0) {
+
+        // Aiming Logic: Auto-lock only on Mobile, manual mouse aim on Desktop
+        if (isMobileDevice) {
+            let closestGuard = null;
+            let minDistance = 280;
+
+            for (let g of guards) {
+                if (g.hp > 0) {
+                    const dist = Math.hypot(g.x - this.x, g.y - this.y);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        closestGuard = g;
+                    }
+                }
+            }
+
+            if (closestGuard) {
+                this.angle = Math.atan2(closestGuard.y - this.y, closestGuard.x - this.x);
+                worldMouseX = closestGuard.x;
+                worldMouseY = closestGuard.y;
+            } else if (dx !== 0 || dy !== 0) {
+                this.angle = Math.atan2(dy, dx);
+                worldMouseX = this.x + dx * 150;
+                worldMouseY = this.y + dy * 150;
+            }
+        } else {
+            // Strictly manual aiming via mouse position on Desktop
             this.angle = Math.atan2(worldMouseY - this.y, worldMouseX - this.x);
-        } else if (dx !== 0 || dy !== 0) {
-            this.angle = Math.atan2(dy, dx);
         }
 
         if (this.attackCooldown > 0) {
@@ -1317,6 +1392,7 @@ window.addEventListener('mousedown', (e) => {
     }
 });
 
+// Left Touch D-Pad Binding
 const bindTouchBtn = (id, keyName) => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -1344,14 +1420,9 @@ document.getElementById('btn-touch-rock')?.addEventListener('touchstart', (e) =>
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
-    const mobileOverlay = document.getElementById('mobile-controls');
-    if ('ontouchstart' in window || window.innerWidth < 768) {
-        mobileOverlay.classList.remove('hidden');
-    }
+    detectDevice();
 }
 window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 
 function update(dt) {
     if (gameState !== 'PLAYING') return;
@@ -1482,13 +1553,13 @@ function updateHUD() {
         stealthBadge.dataset.state = player.state;
         if (player.state === 'CROUCH') {
             stealthBadge.innerText = 'CROUCHED (SILENT)';
-            stealthBadge.className = 'px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-emerald-950/80 border border-emerald-500/50 text-emerald-400';
+            stealthBadge.className = 'px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[11px] font-black tracking-wider uppercase bg-emerald-950/80 border border-emerald-500/50 text-emerald-400';
         } else if (player.state === 'SPRINT') {
             stealthBadge.innerText = 'SPRINTING (LOUD)';
-            stealthBadge.className = 'px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-red-950/80 border border-red-500/50 text-red-400 animate-pulse-fast';
+            stealthBadge.className = 'px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[11px] font-black tracking-wider uppercase bg-red-950/80 border border-red-500/50 text-red-400 animate-pulse-fast';
         } else {
             stealthBadge.innerText = 'NORMAL';
-            stealthBadge.className = 'px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-300';
+            stealthBadge.className = 'px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[11px] font-black tracking-wider uppercase bg-slate-800 border border-slate-600 text-slate-300';
         }
     }
 
@@ -1581,7 +1652,7 @@ async function fetchLeaderboard() {
         let rank = 1;
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            html += `<div class="flex justify-between border-b border-slate-900 pb-0.5">
+            html += `<div class="flex justify-between border-b border-slate-900 pb-0.5 text-xs">
                 <span>#${rank++} <strong class="text-slate-200">${data.name || 'Anonymous'}</strong></span>
                 <span class="text-amber-400 font-mono">${formatTime(data.time)}</span>
             </div>`;
@@ -1606,7 +1677,6 @@ async function submitScore() {
         await addDoc(collection(db, "leaderboard"), {
             uid: currentUser.uid,
             name: currentUser.displayName || 'Anonymous',
-            photoURL: currentUser.photoURL || '',
             time: gameTime,
             kills: guardKills,
             timestamp: serverTimestamp()
@@ -1614,7 +1684,7 @@ async function submitScore() {
 
         if (btn) {
             btn.innerText = 'Score Posted! 🎉';
-            btn.className = 'bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl';
+            btn.className = 'w-full bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl';
         }
         fetchLeaderboard();
     } catch (e) {
@@ -1641,7 +1711,6 @@ function returnToMainMenu() {
     resetKeys();
     loadHighScores();
     
-    // Hide all in-game modals and display main start menu
     document.getElementById('modal-pause')?.classList.add('hidden');
     document.getElementById('modal-gameover')?.classList.add('hidden');
     document.getElementById('modal-victory')?.classList.add('hidden');
@@ -1688,10 +1757,17 @@ function triggerVictory() {
         localStorage.setItem('shadow_castle_v3_kills', guardKills.toString());
     }
 
+    // Refresh user state UI directly on trigger
+    updateAuthUI(currentUser);
+
     document.getElementById('modal-victory').classList.remove('hidden');
 }
 
 function startGame() {
+    detectDevice();
+    if (isMobileDevice) {
+        try { requestFullscreenMode(); } catch(e) {}
+    }
     loadHighScores();
     initLevel();
     resetKeys();
@@ -1710,7 +1786,6 @@ document.getElementById('btn-restart-pause').addEventListener('click', startGame
 document.getElementById('btn-restart-dead').addEventListener('click', startGame);
 document.getElementById('btn-restart-victory').addEventListener('click', startGame);
 
-// Return to Main Menu listeners
 document.getElementById('btn-menu-pause')?.addEventListener('click', returnToMainMenu);
 document.getElementById('btn-menu-dead')?.addEventListener('click', returnToMainMenu);
 document.getElementById('btn-menu-victory')?.addEventListener('click', returnToMainMenu);
@@ -1719,6 +1794,8 @@ document.getElementById('btn-google-login')?.addEventListener('click', handleGoo
 document.getElementById('btn-submit-score')?.addEventListener('click', submitScore);
 
 window.onload = () => {
+    resizeCanvas();
+    detectDevice();
     loadHighScores();
     initLevel();
     requestAnimationFrame(gameLoop);

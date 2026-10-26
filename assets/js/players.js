@@ -5,7 +5,6 @@
  */
 window.ITS126_PLAYERS = [
   { displayName: "Christian", slug: "christian", tagline: "PLAYER 01", accentHue: 15 },
-  { displayName: "Joosep", slug: "joosep", tagline: "PLAYER 02", accentHue: 30 },
   { displayName: "Alisa", slug: "alisa", tagline: "PLAYER 03", accentHue: 45 },
   { displayName: "Kert", slug: "kert", tagline: "PLAYER 04", accentHue: 60 },
   { displayName: "Riko", slug: "riko", tagline: "PLAYER 05", accentHue: 75 },
