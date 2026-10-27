@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="et">
 <head>
@@ -36,7 +35,13 @@ h1 { color: #ffd166; font-size: clamp(28px, 4vw, 42px); margin: 8px 0 14px; lett
 .bet-chip { padding:8px 13px; font-size:14px; background:#e7f4e8; color:#1c482d; box-shadow:0 3px 0 #9ebfa4; }
 .bet-chip.active { background:#ffd166; box-shadow:0 3px 0 #c58b25; }
 .bet-hint { font-size:13px; color:#d7f5dc; margin:5px 0 0; }
-@media(max-width:600px) { .horse-picks { gap:6px; } .horse-card { padding:12px 5px; } .horse-avatar { font-size:30px; } .horse-name { font-size:15px; } .odds-pill { font-size:11px; padding:4px 6px; } }
+@media(max-width:600px) {
+  .horse-picks { gap:6px; }
+  .horse-card { padding:12px 5px; }
+  .horse-avatar { font-size:30px; }
+  .horse-name { font-size:15px; }
+  .odds-pill { font-size:11px; padding:4px 6px; }
+}
 select, input, button {
   padding: 12px 14px; margin: 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,.13);
   font-size: 16px; outline: none; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
@@ -314,28 +319,44 @@ function setDifficulty(mode) {
   createHorses();
   updateBetHint();
 }
-/* Each horse follows a separate lane around the stadium-shaped track. */
+
+/* Hobuse asukoht arvutatakse raja keskjoone järgi.
+   Progress 0 = stardijoon; progress 1 = täpselt üks täisring ja tagasi stardijoonele. */
 function stadiumPoint(progress, laneIndex) {
   const w = track.clientWidth, h = track.clientHeight;
   const scaleX = w / 900, scaleY = h / 520;
-  const laneSpan = 135;
-  const laneStep = horses.length > 1 ? laneSpan / (horses.length - 1) : 27;
-  const inset = horses.length > 1 ? 13.5 + laneIndex * laneStep : 81;
+
+  // Rajal on 6 päris sõidurada. Iga hobune hoiab kogu võistluse sama raja keskjoont.
+  const laneSlotsByCount = {
+    3: [0, 2, 5],
+    5: [0, 1, 3, 4, 5],
+    6: [0, 1, 2, 3, 4, 5]
+  };
+  const laneSlot = (laneSlotsByCount[horses.length] || [0, 1, 2, 3, 4, 5])[laneIndex] ?? laneIndex;
+  const inset = 13.5 + laneSlot * 27;
+
   const left = 260, right = 640;
   const top = 55 + inset, bottom = 465 - inset;
   const radius = (bottom - top) / 2;
   const straight = right - left;
   const arcLength = Math.PI * radius;
   const total = 2 * straight + 2 * arcLength;
-  let d = ((((progress % 1) + 1) % 1) * total + straight / 2) % total;
+
+  // Ära kasuta progressi modulo't: finišis ei tohi hobune uuesti ringi algusesse hüpata.
+  const safeProgress = Math.max(0, Math.min(1, progress));
+  let d = straight / 2 + safeProgress * total;
+  if (d >= total) d -= total; // progress 1 asetab hobuse täpselt stardijoonele.
+
   let x, y;
-  if (d < straight) { x = left + d; y = top; }
-  else if ((d -= straight) < arcLength) {
+  if (d < straight) {
+    x = left + d; y = top;
+  } else if ((d -= straight) < arcLength) {
     const angle = -Math.PI / 2 + d / radius;
     x = right + radius * Math.cos(angle);
     y = (top + bottom) / 2 + radius * Math.sin(angle);
-  } else if ((d -= arcLength) < straight) { x = right - d; y = bottom; }
-  else {
+  } else if ((d -= arcLength) < straight) {
+    x = right - d; y = bottom;
+  } else {
     d -= straight;
     const angle = Math.PI / 2 + d / radius;
     x = left + radius * Math.cos(angle);
@@ -417,8 +438,12 @@ function race() {
   raceButton.textContent = "⏳ Stardiks valmistumine…";
   finishOrder = [];
   horses.forEach(h => {
-    h.progress = 0; h.finished = false; h.finishPlace = 0;
-    h.speed = 0.000055 + Math.random() * 0.000018;
+    h.progress = 0;
+    h.finished = false;
+    h.finishPlace = 0;
+    // Igal hobusel on kogu ringi jaoks kindel kiirus; juhuslik kõikumine ei saa teda peatada.
+    h.duration = 7200 + Math.random() * 3000;
+    h.speed = 1 / h.duration;
   });
   const countdown = document.getElementById("raceCountdown");
   const countdownNumber = document.getElementById("countdownNumber");
@@ -461,9 +486,10 @@ function race() {
       lastTime = time;
       horses.forEach(h => {
         if (!h.finished) {
-          const variation = 0.96 + Math.random() * 0.08;
-          h.progress = Math.min(1.035, h.progress + h.speed * delta * variation);
-          if (h.progress >= 1.025) {
+          h.progress = Math.min(1, h.progress + h.speed * delta);
+          if (h.progress >= 1) {
+            // Fikseeri täpne finišipositsioon: üks täisring, mitte lisaring.
+            h.progress = 1;
             h.finished = true;
             h.finishPlace = finishOrder.length + 1;
             finishOrder.push(h);
