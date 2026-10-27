@@ -16,7 +16,7 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- Custom Stylesheet -->
+  <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-6 relative">
@@ -35,7 +35,14 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <!-- GOOGLE AUTH CONTAINER -->
+      <div id="authContainer">
+        <button id="loginBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2">
+          <i class="fa-brands fa-google"></i> Logi sisse (@voco.ee)
+        </button>
+      </div>
+
       <div class="bg-amber-500/10 border border-amber-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2">
         <i class="fa-solid fa-key text-amber-400 text-lg key-badge"></i>
         <span id="keyCount" class="orbitron text-amber-300 font-bold text-lg">0</span>
@@ -48,7 +55,7 @@
   </header>
 
   <!-- MAIN CONTAINER -->
-  <main class="w-full max-w-5xl flex-1 flex flex-col lg:flex-row gap-6 items-start justify-center relative w-full">
+  <main class="w-full max-w-5xl flex-1 flex flex-col lg:flex-row gap-6 items-start justify-center relative">
 
     <!-- GAME CANVAS CONTAINER -->
     <div id="gameCard" class="w-full lg:w-[640px] bg-slate-900/90 border border-slate-800 rounded-3xl p-4 shadow-2xl backdrop-blur-md relative flex flex-col items-center">
@@ -178,7 +185,7 @@
     </div>
   </div>
 
-  <!-- Custom Script -->
-  <script src="script.js"></script>
+  <!-- JavaScript Entry Point -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>
