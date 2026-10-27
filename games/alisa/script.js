@@ -94,6 +94,31 @@ const player = {
 let bullets = [], enemyBullets = [], enemies = [], powerUps = [], particles = [], stars = [];
 const keys = { left: false, right: false, shoot: false };
 
+// Start screen: lock the name to the Google account when logged in
+function updateStartAuthUI() {
+  const input = document.getElementById('playerNameInput');
+  const hint = document.getElementById('authHint');
+  const loginBtn = document.getElementById('startLoginBtn');
+
+  if (currentUser) {
+    input.value = currentPlayerName;
+    input.readOnly = true;
+    hint.textContent = 'Sisse logitud – tulemus salvestatakse edetabelisse.';
+    hint.className = 'text-[11px] text-emerald-400';
+    loginBtn.classList.add('hidden');
+  } else {
+    input.readOnly = false;
+    hint.textContent = 'Edetabelisse pääsemiseks logi sisse.';
+    hint.className = 'text-[11px] text-slate-500';
+    loginBtn.classList.remove('hidden');
+  }
+}
+
+document.getElementById('startLoginBtn').addEventListener('click', () => {
+  signInWithPopup(auth, googleProvider).catch((err) => console.error("Sisselogimise viga:", err));
+});
+updateStartAuthUI();
+
 // --- GOOGLE AUTHENTICATION (VOCO.EE RESTRICTION) ---
 onAuthStateChanged(auth, (user) => {
   const authContainer = document.getElementById('authContainer');
@@ -105,8 +130,8 @@ onAuthStateChanged(auth, (user) => {
     }
     currentUser = user;
     currentPlayerName = user.displayName || user.email.split('@')[0];
-    document.getElementById('playerNameInput').value = currentPlayerName;
-    
+    updateStartAuthUI();
+
     if (authContainer) {
       authContainer.innerHTML = `
         <div class="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl text-xs text-slate-200">
@@ -117,6 +142,9 @@ onAuthStateChanged(auth, (user) => {
     }
   } else {
     currentUser = null;
+    currentPlayerName = localStorage.getItem('kosmose_player_name') || 'Allu';
+    document.getElementById('playerNameInput').value = currentPlayerName;
+    updateStartAuthUI();
     if (authContainer) {
       authContainer.innerHTML = `
         <button id="loginBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2">
@@ -210,6 +238,7 @@ document.getElementById('searchPlayer').addEventListener('input', (e) => {
 });
 
 window.addEventListener('keydown', e => {
+  if (isPlaying && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
   if (e.code === 'Space') {
@@ -223,6 +252,10 @@ window.addEventListener('keyup', e => {
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
   if (e.code === 'Space') keys.shoot = false;
 });
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function renderLeaderboard(filter = "") {
   const listContainer = document.getElementById('leaderboardList');
@@ -258,7 +291,7 @@ function renderLeaderboard(filter = "") {
     row.innerHTML = `
       <div class="flex items-center gap-2 overflow-hidden">
         ${rankBadge}
-        <span class="font-semibold text-xs truncate max-w-[110px]">${entry.name}</span>
+        <span class="font-semibold text-xs truncate max-w-[110px]">${escapeHtml(entry.name)}</span>
       </div>
       <div class="text-right">
         <span class="orbitron font-bold text-xs text-cyan-400">${entry.kills} hit</span>
@@ -286,14 +319,18 @@ async function saveScoreToFirestore(name, totalKillsCount, elapsedTimeInSeconds)
 }
 
 function startNewGame() {
-  const inputName = document.getElementById('playerNameInput').value.trim();
-  currentPlayerName = inputName || (currentUser ? currentUser.displayName : "Allu");
-  localStorage.setItem('kosmose_player_name', currentPlayerName);
+  if (currentUser) {
+    currentPlayerName = currentUser.displayName || currentUser.email.split('@')[0];
+  } else {
+    currentPlayerName = document.getElementById('playerNameInput').value.trim() || "Allu";
+    localStorage.setItem('kosmose_player_name', currentPlayerName);
+  }
 
   score = 0; 
   lives = 3; 
   level = 1;
   totalKills = 0;
+  enemyDirection = 1;
   gameStartTime = Date.now();
 
   bullets = []; enemyBullets = []; enemies = []; powerUps = []; particles = [];
@@ -371,24 +408,26 @@ function updateGame() {
   if (keys.left && player.x - player.width/2 > 10) player.x -= currentSpeed;
   if (keys.right && player.x + player.width/2 < canvas.width - 10) player.x += currentSpeed;
 
-  bullets.forEach((b, index) => {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
     b.x += b.dx || 0;
     b.y += b.dy;
-    if (b.y < -10) bullets.splice(index, 1);
-  });
+    if (b.y < -10) bullets.splice(i, 1);
+  }
 
-  enemyBullets.forEach((eb, index) => {
+  for (let i = enemyBullets.length - 1; i >= 0; i--) {
+    const eb = enemyBullets[i];
     eb.y += eb.dy;
     if (Math.abs(eb.x - player.x) < 22 && Math.abs(eb.y - player.y) < 22) {
-      enemyBullets.splice(index, 1);
+      enemyBullets.splice(i, 1);
       createExplosion(player.x, player.y, '#ef4444', 20);
       playSound('explosion');
       lives--;
-      if (lives <= 0) endGame();
+      if (lives <= 0) { endGame(); return; }
     } else if (eb.y > canvas.height + 10) {
-      enemyBullets.splice(index, 1);
+      enemyBullets.splice(i, 1);
     }
-  });
+  }
 
   let moveDown = false;
   const enemySpeed = 0.8 + (level * 0.25);
@@ -406,10 +445,19 @@ function updateGame() {
     enemies.forEach(e => e.y += 12);
   }
 
-  bullets.forEach((b, bIdx) => {
-    enemies.forEach((e, eIdx) => {
+  // Enemies reaching the player's line = game over
+  if (enemies.some(e => e.y + e.height >= player.y - 20)) {
+    lives = 0;
+    endGame();
+    return;
+  }
+
+  for (let bi = bullets.length - 1; bi >= 0; bi--) {
+    const b = bullets[bi];
+    for (let ei = enemies.length - 1; ei >= 0; ei--) {
+      const e = enemies[ei];
       if (b.x > e.x && b.x < e.x + e.width && b.y > e.y && b.y < e.y + e.height) {
-        bullets.splice(bIdx, 1);
+        bullets.splice(bi, 1);
         e.hp--;
         createExplosion(b.x, b.y, e.color, 6);
 
@@ -418,18 +466,20 @@ function updateGame() {
           createExplosion(e.x + e.width/2, e.y + e.height/2, e.color, 16);
           score += (e.type === 'boss' ? 35 : 20);
           totalKills++;
-          
+
           if (Math.random() < 0.18) {
             const types = ['3X', 'SPEED', 'LIFE'];
             powerUps.push({ x: e.x + e.width/2, y: e.y, type: types[Math.floor(Math.random() * types.length)] });
           }
-          enemies.splice(eIdx, 1);
+          enemies.splice(ei, 1);
         }
+        break; // one bullet hits only one enemy
       }
-    });
-  });
+    }
+  }
 
-  powerUps.forEach((p, pIdx) => {
+  for (let pi = powerUps.length - 1; pi >= 0; pi--) {
+    const p = powerUps[pi];
     p.y += 2.2;
     if (Math.abs(p.x - player.x) < 25 && Math.abs(p.y - player.y) < 25) {
       playSound('powerup');
@@ -437,11 +487,11 @@ function updateGame() {
       if (p.type === 'SPEED') player.speedBoostTimer = 350;
       if (p.type === 'LIFE') lives = Math.min(lives + 1, 5);
       unlockAchievement('powerup_collector');
-      powerUps.splice(pIdx, 1);
+      powerUps.splice(pi, 1);
     } else if (p.y > canvas.height) {
-      powerUps.splice(pIdx, 1);
+      powerUps.splice(pi, 1);
     }
-  });
+  }
 
   if (enemies.length === 0) {
     level++;
@@ -451,12 +501,13 @@ function updateGame() {
   if (score >= 500) unlockAchievement('score_500');
   if (score >= 2000) unlockAchievement('score_2000');
 
-  particles.forEach((p, idx) => {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
     p.x += p.vx;
     p.y += p.vy;
     p.alpha -= 0.04;
-    if (p.alpha <= 0) particles.splice(idx, 1);
-  });
+    if (p.alpha <= 0) particles.splice(i, 1);
+  }
 
   stars.forEach(s => {
     s.y += s.speed;
@@ -623,6 +674,7 @@ function gameLoop() {
 }
 
 function endGame() {
+  if (!isPlaying) return; // prevent double-saving
   isPlaying = false;
   const elapsedTimeInSeconds = (Date.now() - gameStartTime) / 1000;
 
