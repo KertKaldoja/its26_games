@@ -1,9 +1,44 @@
-// --- LEADERBOARD LOCALSTORAGE ---
-let localLeaderboard = [];
-try {
-  const saved = localStorage.getItem('kosmose_clean_lb_v8');
-  if (saved) localLeaderboard = JSON.parse(saved);
-} catch(e) { localLeaderboard = []; }
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  limit 
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBhvZMRuOJUQrCJ1f2ssdIIDNmoGZr6ndE",
+  authDomain: "treumuth-its26games-alisa.firebaseapp.com",
+  projectId: "treumuth-its26games-alisa",
+  storageBucket: "treumuth-its26games-alisa.firebasestorage.app",
+  messagingSenderId: "656147050699",
+  appId: "1:656147050699:web:e5ba40d92fff15a84aab4e",
+  measurementId: "G-5GSGRWVE0P"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+
+// --- STATE VARIABLES ---
+let currentUser = null;
+let firestoreLeaderboard = [];
+let gameStartTime = 0;
+let totalKills = 0;
 
 let currentPlayerName = localStorage.getItem('kosmose_player_name') || 'Allu';
 let keysCount = parseInt(localStorage.getItem('kosmose_keys') || '3');
@@ -58,6 +93,55 @@ const player = {
 
 let bullets = [], enemyBullets = [], enemies = [], powerUps = [], particles = [], stars = [];
 const keys = { left: false, right: false, shoot: false };
+
+// --- GOOGLE AUTHENTICATION (VOCO.EE RESTRICTION) ---
+onAuthStateChanged(auth, (user) => {
+  const authContainer = document.getElementById('authContainer');
+  if (user) {
+    if (!user.email.endsWith('@voco.ee')) {
+      alert('Sisselogimine on lubatud ainult @voco.ee e-posti aadressiga!');
+      signOut(auth);
+      return;
+    }
+    currentUser = user;
+    currentPlayerName = user.displayName || user.email.split('@')[0];
+    document.getElementById('playerNameInput').value = currentPlayerName;
+    
+    if (authContainer) {
+      authContainer.innerHTML = `
+        <div class="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl text-xs text-slate-200">
+          <span class="text-emerald-400 font-bold">●</span> ${user.displayName || user.email}
+          <button id="logoutBtn" class="ml-2 text-red-400 hover:text-red-300 font-bold">Välju</button>
+        </div>`;
+      document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+    }
+  } else {
+    currentUser = null;
+    if (authContainer) {
+      authContainer.innerHTML = `
+        <button id="loginBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2">
+          <i class="fa-brands fa-google"></i> Logi sisse (@voco.ee)
+        </button>`;
+      document.getElementById('loginBtn').addEventListener('click', () => {
+        signInWithPopup(auth, googleProvider).catch((err) => {
+          console.error("Sisselogimise viga:", err);
+        });
+      });
+    }
+  }
+});
+
+// --- FIRESTORE REALTIME LEADERBOARD ---
+const lbQuery = query(collection(db, "leaderboard"), orderBy("kills", "desc"), limit(50));
+onSnapshot(lbQuery, (snapshot) => {
+  firestoreLeaderboard = [];
+  snapshot.forEach((doc) => {
+    firestoreLeaderboard.push(doc.data());
+  });
+  renderLeaderboard();
+}, (error) => {
+  console.error("Viga edetabeli laadimisel:", error);
+});
 
 // Audio Synthesizer
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -145,12 +229,12 @@ function renderLeaderboard(filter = "") {
   const totalBadge = document.getElementById('totalPlayersBadge');
   const avgBadge = document.getElementById('avgScoreVal');
 
-  const filtered = localLeaderboard.filter(item => item.name.toLowerCase().includes(filter.toLowerCase()));
-  totalBadge.innerText = `${localLeaderboard.length} Mängijat`;
+  const filtered = firestoreLeaderboard.filter(item => item.name.toLowerCase().includes(filter.toLowerCase()));
+  totalBadge.innerText = `${firestoreLeaderboard.length} Mängijat`;
 
-  if (localLeaderboard.length > 0) {
-    const sum = localLeaderboard.reduce((a, b) => a + b.score, 0);
-    avgBadge.innerText = Math.round(sum / localLeaderboard.length);
+  if (firestoreLeaderboard.length > 0) {
+    const sum = firestoreLeaderboard.reduce((a, b) => a + (b.kills || 0), 0);
+    avgBadge.innerText = Math.round(sum / firestoreLeaderboard.length);
   } else {
     avgBadge.innerText = "0";
   }
@@ -158,7 +242,7 @@ function renderLeaderboard(filter = "") {
   listContainer.innerHTML = "";
 
   if (filtered.length === 0) {
-    listContainer.innerHTML = `<div class="text-center py-12 text-slate-500 text-xs">Edetabel on veel tühi! Mängi ja ole esimene!</div>`;
+    listContainer.innerHTML = `<div class="text-center py-12 text-slate-500 text-xs">Edetabel on tühi või tulemusi ei leitud!</div>`;
     return;
   }
 
@@ -176,32 +260,42 @@ function renderLeaderboard(filter = "") {
         ${rankBadge}
         <span class="font-semibold text-xs truncate max-w-[110px]">${entry.name}</span>
       </div>
-      <span class="orbitron font-bold text-xs text-cyan-400">${entry.score}</span>
+      <div class="text-right">
+        <span class="orbitron font-bold text-xs text-cyan-400">${entry.kills} hit</span>
+        <span class="text-[10px] text-slate-500 block">${(entry.time || 0).toFixed(1)}s</span>
+      </div>
     `;
     listContainer.appendChild(row);
   });
 }
 
-function saveScoreToLeaderboard(name, scoreVal) {
-  if (!name || scoreVal <= 0) return;
-  const existing = localLeaderboard.find(i => i.name.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    if (scoreVal > existing.score) existing.score = scoreVal;
-  } else {
-    localLeaderboard.push({ name: name, score: scoreVal });
+async function saveScoreToFirestore(name, totalKillsCount, elapsedTimeInSeconds) {
+  if (!currentUser) return;
+  if (elapsedTimeInSeconds <= 5.0) return; // Strict Firestore rule match: time > 5.0
+
+  try {
+    await addDoc(collection(db, "leaderboard"), {
+      uid: currentUser.uid,
+      name: name,
+      kills: totalKillsCount,
+      time: elapsedTimeInSeconds
+    });
+  } catch (e) {
+    console.error("Viga tulemuse salvestamisel Firestore'i: ", e);
   }
-  localLeaderboard.sort((a, b) => b.score - a.score);
-  localLeaderboard = localLeaderboard.slice(0, 50);
-  localStorage.setItem('kosmose_clean_lb_v8', JSON.stringify(localLeaderboard));
-  renderLeaderboard();
 }
 
 function startNewGame() {
   const inputName = document.getElementById('playerNameInput').value.trim();
-  currentPlayerName = inputName || "Allu";
+  currentPlayerName = inputName || (currentUser ? currentUser.displayName : "Allu");
   localStorage.setItem('kosmose_player_name', currentPlayerName);
 
-  score = 0; lives = 3; level = 1;
+  score = 0; 
+  lives = 3; 
+  level = 1;
+  totalKills = 0;
+  gameStartTime = Date.now();
+
   bullets = []; enemyBullets = []; enemies = []; powerUps = []; particles = [];
   player.x = canvas.width / 2;
   player.tripleShotTimer = 0;
@@ -323,6 +417,7 @@ function updateGame() {
           playSound('explosion');
           createExplosion(e.x + e.width/2, e.y + e.height/2, e.color, 16);
           score += (e.type === 'boss' ? 35 : 20);
+          totalKills++;
           
           if (Math.random() < 0.18) {
             const types = ['3X', 'SPEED', 'LIFE'];
@@ -369,7 +464,6 @@ function updateGame() {
   });
 }
 
-// --- DETAILED NEON ART RENDERING ---
 function renderGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -386,7 +480,7 @@ function renderGame() {
   ctx.translate(player.x, player.y);
   const shipColor = SHIPS[selectedShip].color;
 
-  // Reaktiivleek / Thruster Effect
+  // Thruster Effect
   ctx.fillStyle = '#f59e0b';
   ctx.shadowColor = '#f59e0b';
   ctx.shadowBlur = 10;
@@ -398,7 +492,7 @@ function renderGame() {
   ctx.closePath();
   ctx.fill();
 
-  // Ship Wings & Main Hull
+  // Ship Hull
   ctx.fillStyle = shipColor;
   ctx.shadowColor = shipColor;
   ctx.shadowBlur = 14;
@@ -440,7 +534,7 @@ function renderGame() {
   });
   ctx.shadowBlur = 0;
 
-  // Enemies (Detailed Alien Ships)
+  // Enemies
   enemies.forEach(e => {
     ctx.save();
     ctx.translate(e.x + e.width/2, e.y + e.height/2);
@@ -450,7 +544,6 @@ function renderGame() {
     ctx.shadowBlur = 10;
 
     if (e.type === 'boss') {
-      // Boss Ship Geometry
       ctx.beginPath();
       ctx.moveTo(0, 14);
       ctx.lineTo(18, -6);
@@ -460,13 +553,11 @@ function renderGame() {
       ctx.closePath();
       ctx.fill();
 
-      // Boss Red Core
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
       ctx.arc(0, 0, 5, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Regular Alien Geometry
       ctx.beginPath();
       ctx.moveTo(0, -12);
       ctx.lineTo(16, 0);
@@ -476,7 +567,6 @@ function renderGame() {
       ctx.closePath();
       ctx.fill();
 
-      // Glowing Eyes
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(-6, 2, 3, 3);
       ctx.fillRect(3, 2, 3, 3);
@@ -509,7 +599,7 @@ function renderGame() {
   });
   ctx.globalAlpha = 1;
 
-  // HUD Overlay
+  // HUD
   ctx.font = 'bold 16px Orbitron';
   ctx.fillStyle = '#38bdf8';
   ctx.textAlign = 'left';
@@ -534,12 +624,15 @@ function gameLoop() {
 
 function endGame() {
   isPlaying = false;
+  const elapsedTimeInSeconds = (Date.now() - gameStartTime) / 1000;
+
   if (score > highScore) {
     highScore = score;
     localStorage.setItem('kosmose_highscore', highScore);
     document.getElementById('topScoreNav').innerText = highScore;
   }
-  saveScoreToLeaderboard(currentPlayerName, score);
+
+  saveScoreToFirestore(currentPlayerName, totalKills, elapsedTimeInSeconds);
 
   document.getElementById('finalScore').innerText = score;
   document.getElementById('finalHighScore').innerText = highScore;
@@ -549,7 +642,7 @@ function endGame() {
   document.getElementById('overlay').classList.remove('hidden');
 }
 
-// Tab modal navigation
+// Modal navigation
 function switchTab(tab) {
   ['navMenuBtn', 'navCharBtn', 'navBoardsBtn', 'navAwardsBtn'].forEach(id => {
     document.getElementById(id).classList.remove('active');
@@ -605,11 +698,11 @@ function renderCharactersModal() {
   return html;
 }
 
-function selectShip(key) {
+window.selectShip = function(key) {
   selectedShip = key;
   localStorage.setItem('kosmose_ship', key);
   openModal('Tegelased / Laevad', renderCharactersModal());
-}
+};
 
 function renderBoardsModal() {
   let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
@@ -635,11 +728,11 @@ function renderBoardsModal() {
   return html;
 }
 
-function selectLaser(key) {
+window.selectLaser = function(key) {
   selectedLaser = key;
   localStorage.setItem('kosmose_laser', key);
   openModal('Disainid / Relvad', renderBoardsModal());
-}
+};
 
 function renderAwardsModal() {
   let html = '<div class="space-y-3">';
